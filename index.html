@@ -16,6 +16,7 @@
     --input-bg: #0f172a;
     --locked-bg: #162032;
     --red-amount: #f87171;
+    --green-btn: #22c55e;
   }
 
   * {
@@ -32,6 +33,7 @@
     flex-direction: column;
     align-items: center;
     min-height: 100vh;
+    gap: 16px;
   }
 
   .container {
@@ -75,11 +77,12 @@
     transition: 0.15s;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 4px;
   }
 
   button:active {
-    transform: scale(0.96);
+    transform: scale(0.97);
   }
 
   .btn-lock {
@@ -158,7 +161,6 @@
     border-color: var(--accent);
   }
 
-  /* Locked Multiplier Styling */
   .mult-input:disabled {
     background: var(--locked-bg);
     border-color: transparent;
@@ -167,7 +169,6 @@
     opacity: 0.95;
   }
 
-  /* Unlocked Multiplier Highlight */
   .mult-input:not(:disabled) {
     border-color: rgba(250, 204, 21, 0.5);
     background: #172033;
@@ -180,7 +181,6 @@
     margin: 0; 
   }
 
-  /* Red Amount Font */
   .amount-cell {
     font-weight: 700;
     font-size: 1.05rem;
@@ -188,20 +188,50 @@
     word-break: break-all;
   }
 
-  /* Row 7: Totals */
-  tfoot tr {
-    background: #0b1324;
-    font-weight: 800;
-  }
-
-  tfoot td {
-    padding: 14px 6px;
-    font-size: 1.05rem;
-    border-top: 2px solid var(--accent);
+  /* Enter Button Bar (Before Total) */
+  .enter-bar {
+    padding: 12px 16px;
+    background: #162032;
     border-bottom: 1px solid var(--border);
   }
 
-  tfoot td:nth-child(1) {
+  .btn-enter {
+    width: 100%;
+    padding: 12px;
+    background: var(--green-btn);
+    color: #052e16;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
+  }
+
+  .btn-enter:hover {
+    background: #4ade80;
+  }
+
+  /* Row 7: Totals (Hidden until Enter is tapped) */
+  .total-section {
+    display: none;
+    background: #0b1324;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .total-section.visible {
+    display: table;
+  }
+
+  .total-section td {
+    padding: 14px 6px;
+    font-size: 1.05rem;
+    font-weight: 800;
+    border-top: 2px solid var(--accent);
+  }
+
+  .total-section td:nth-child(1) {
     color: var(--muted);
     font-size: 0.85rem;
     text-transform: uppercase;
@@ -253,11 +283,123 @@
     border-color: var(--accent);
   }
 
-  .footer-note {
-    margin-top: 12px;
+  /* Records Section */
+  .records-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #162032;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .records-header h2 {
+    margin: 0;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+  }
+
+  .record-count {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--muted);
+    background: var(--input-bg);
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+  }
+
+  .record-list {
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 420px;
+    overflow-y: auto;
+  }
+
+  .empty-records {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    padding: 20px 0;
+  }
+
+  .record-item {
+    background: #0f172a;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .rec-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .rec-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text);
+  }
+
+  .rec-time {
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  .rec-mid {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    padding-top: 4px;
+    border-top: 1px dashed var(--border);
+  }
+
+  .rec-breakdown {
     font-size: 0.75rem;
     color: var(--muted);
+  }
+
+  .rec-stats {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .rec-qty {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .rec-amt {
+    color: var(--red-amount);
+    font-weight: 800;
+    font-size: 0.95rem;
+  }
+
+  .btn-del-rec {
+    background: rgba(239, 68, 68, 0.12);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    padding: 4px 8px;
+    font-size: 0.72rem;
+    border-radius: 6px;
+  }
+
+  .footer-note {
+    font-size: 0.74rem;
+    color: var(--muted);
     text-align: center;
+    margin-bottom: 12px;
   }
 </style>
 </head>
@@ -316,26 +458,42 @@
         <td class="amount-cell" id="amt-4">0</td>
       </tr>
     </tbody>
+  </table>
 
-    <!-- ROW 7: TOTALS -->
-    <tfoot>
-      <tr>
-        <td>TOTAL</td>
-        <td id="total-qty">0</td>
-        <td>—</td>
-        <td id="total-amount">0</td>
-      </tr>
-    </tfoot>
+  <!-- ENTER BUTTON (Appears before Total) -->
+  <div class="enter-bar">
+    <button class="btn-enter" onclick="handleEnter()">Enter</button>
+  </div>
+
+  <!-- ROW 7: TOTALS (Revealed when Enter is tapped) -->
+  <table class="total-section" id="total-table">
+    <tr>
+      <td>TOTAL</td>
+      <td id="total-qty">0</td>
+      <td>—</td>
+      <td id="total-amount">0</td>
+    </tr>
   </table>
 
   <!-- NAME BAR UNDER TOTAL -->
   <div class="name-bar">
     <label for="entry-name">Name:</label>
-    <input type="text" id="entry-name" placeholder="Enter name...">
+    <input type="text" id="entry-name" placeholder="Enter name (optional)...">
   </div>
 </div>
 
-<div class="footer-note" id="status-note">Multipliers locked by default. Tap "Locked" to edit.</div>
+<!-- RECORD LIST CONTAINER (Max 10 Sets, Resets at 12:00 AM Midnight) -->
+<div class="container">
+  <div class="records-header">
+    <h2>Daily Records</h2>
+    <span class="record-count" id="record-count">0 / 10</span>
+  </div>
+  <div class="record-list" id="record-list">
+    <div class="empty-records">No records yet today.</div>
+  </div>
+</div>
+
+<div class="footer-note" id="status-note">Records auto-reset every 12:00 AM midnight.</div>
 
 <script>
   const qtyInputs = document.querySelectorAll('.qty-input');
@@ -343,9 +501,14 @@
   const lockBtn = document.getElementById('lock-btn');
   const statusNote = document.getElementById('status-note');
   const nameInput = document.getElementById('entry-name');
+  const totalTable = document.getElementById('total-table');
+  const recordListEl = document.getElementById('record-list');
+  const recordCountEl = document.getElementById('record-count');
+
+  const MAX_RECORDS = 10;
+  const LABELS = ['R', 'P', 'L', 'M', 'C'];
   let isLocked = true;
 
-  // Format whole numbers without decimals
   function formatAmount(num) {
     return Math.round(num).toLocaleString('en-US', {
       maximumFractionDigits: 0
@@ -356,6 +519,51 @@
     return num.toLocaleString('en-US', {
       maximumFractionDigits: 4
     });
+  }
+
+  // Get local date string (YYYY-MM-DD) for midnight reset check
+  function getTodayKey() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // Format phone's current date & time
+  function getFormattedTimestamp() {
+    const now = new Date();
+    return now.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+  }
+
+  // Check and enforce 12:00 AM midnight reset
+  function checkMidnightReset() {
+    const savedDate = localStorage.getItem('rplmc_records_date');
+    const today = getTodayKey();
+
+    if (savedDate !== today) {
+      localStorage.setItem('rplmc_records', JSON.stringify([]));
+      localStorage.setItem('rplmc_records_date', today);
+    }
+  }
+
+  function getRecords() {
+    checkMidnightReset();
+    return JSON.parse(localStorage.getItem('rplmc_records') || '[]');
+  }
+
+  function saveRecords(records) {
+    localStorage.setItem('rplmc_records', JSON.stringify(records));
+    localStorage.setItem('rplmc_records_date', getTodayKey());
+    renderRecords();
   }
 
   // Toggle Lock/Unlock state for Multipliers
@@ -378,7 +586,7 @@
     }
   }
 
-  // Load saved multipliers on startup (always stays locked by default)
+  // Startup initialization
   window.addEventListener('DOMContentLoaded', () => {
     const savedMults = JSON.parse(localStorage.getItem('rplmc_multipliers') || '[]');
 
@@ -388,10 +596,21 @@
       }
     });
 
+    checkMidnightReset();
     calculate();
+    renderRecords();
+
+    // Auto-check every 30 seconds in case the app stays open past 12:00 AM midnight
+    setInterval(() => {
+      const savedDate = localStorage.getItem('rplmc_records_date');
+      if (savedDate && savedDate !== getTodayKey()) {
+        checkMidnightReset();
+        renderRecords();
+      }
+    }, 30000);
   });
 
-  // Core calculation logic
+  // Live row calculation
   function calculate() {
     let totalQty = 0;
     let totalAmount = 0;
@@ -413,12 +632,97 @@
 
     document.getElementById('total-qty').textContent = formatQty(totalQty);
     document.getElementById('total-amount').textContent = formatAmount(totalAmount);
+
+    return { totalQty, totalAmount };
   }
 
-  // Clear QTY and Name while keeping Multipliers locked & intact
+  // Handle Enter button tap
+  function handleEnter() {
+    const { totalQty, totalAmount } = calculate();
+
+    // Reveal the Total row
+    totalTable.classList.add('visible');
+
+    const records = getRecords();
+
+    // Enforce 10-record limit: prompt user to delete specific entries to make space
+    if (records.length >= MAX_RECORDS) {
+      alert('Record list is full (10/10). Please delete some entries from the list below to make space.');
+      return;
+    }
+
+    const rawName = nameInput.value.trim();
+    const recordName = rawName !== '' ? rawName : 'N/A';
+
+    // Capture breakdown of entered quantities
+    const breakdownParts = [];
+    for (let i = 0; i < 5; i++) {
+      const q = parseFloat(qtyInputs[i].value) || 0;
+      if (q > 0) {
+        breakdownParts.push(`${LABELS[i]}:${formatQty(q)}`);
+      }
+    }
+
+    const newRecord = {
+      id: Date.now(),
+      name: recordName,
+      timestamp: getFormattedTimestamp(),
+      totalQty: totalQty,
+      totalAmount: Math.round(totalAmount),
+      breakdown: breakdownParts.length > 0 ? breakdownParts.join(' | ') : 'No QTY'
+    };
+
+    records.unshift(newRecord);
+    saveRecords(records);
+  }
+
+  // Delete a single record to free up a slot
+  function deleteRecord(id) {
+    const records = getRecords().filter(item => item.id !== id);
+    saveRecords(records);
+  }
+
+  // Render daily record list
+  function renderRecords() {
+    const records = getRecords();
+    recordCountEl.textContent = `${records.length} / ${MAX_RECORDS}`;
+
+    if (records.length === 0) {
+      recordListEl.innerHTML = '<div class="empty-records">No records yet today.</div>';
+      return;
+    }
+
+    recordListEl.innerHTML = records.map((rec, idx) => `
+      <div class="record-item">
+        <div class="rec-top">
+          <div>
+            <span class="rec-name">#${records.length - idx} — ${escapeHtml(rec.name)}</span>
+            <div class="rec-time">${rec.timestamp}</div>
+          </div>
+          <button class="btn-del-rec" onclick="deleteRecord(${rec.id})">Delete</button>
+        </div>
+        <div class="rec-mid">
+          <div class="rec-breakdown">${rec.breakdown}</div>
+          <div class="rec-stats">
+            <span class="rec-qty">QTY: ${formatQty(rec.totalQty)}</span>
+            <span class="rec-amt">${formatAmount(rec.totalAmount)}</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // Clear inputs and hide Total until Enter is tapped again
   function clearAll() {
     qtyInputs.forEach(input => input.value = '');
     nameInput.value = '';
+    totalTable.classList.remove('visible');
     calculate();
     qtyInputs[0].focus();
   }
