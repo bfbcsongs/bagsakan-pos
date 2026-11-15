@@ -210,15 +210,10 @@
     background: #4ade80;
   }
 
-  /* Summary Section (Total Amount, Payment, Difference) */
+  /* Summary Section: Always visible so Payment & Sukli can be entered anytime */
   .summary-section {
-    display: none;
     background: #0b1324;
     border-bottom: 1px solid var(--border);
-  }
-
-  .summary-section.visible {
-    display: block;
   }
 
   .summary-row {
@@ -242,35 +237,30 @@
   }
 
   .summary-value {
-    font-size: 1.15rem;
+    font-size: 1.2rem;
     font-weight: 800;
   }
 
   #total-amount-disp {
     color: var(--red-amount);
-    font-size: 1.25rem;
+    font-size: 1.3rem;
   }
 
   .payment-input {
-    width: 140px;
-    padding: 8px 10px;
+    width: 150px;
+    padding: 8px 12px;
     background: var(--input-bg);
-    border: 1px solid var(--border);
+    border: 1px solid var(--accent);
     border-radius: 8px;
     color: #4ade80;
     font-size: 1.15rem;
     font-weight: 700;
     text-align: right;
     outline: none;
-    transition: border-color 0.2s;
-  }
-
-  .payment-input:focus {
-    border-color: var(--accent);
   }
 
   #diff-disp {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
   }
 
   .name-bar {
@@ -426,10 +416,11 @@
   }
 
   .rec-pay-diff {
-    font-size: 0.75rem;
+    font-size: 0.78rem;
     color: var(--muted);
     display: flex;
-    gap: 12px;
+    gap: 14px;
+    font-weight: 600;
   }
 
   .btn-del-rec {
@@ -518,7 +509,7 @@
     <button class="btn-enter" onclick="handleEnter()">Enter</button>
   </div>
 
-  <!-- SUMMARY SECTION (Total Amount, Payment, Difference) -->
+  <!-- SUMMARY SECTION: Total Amount, Payment, Difference (Sukli) -->
   <div class="summary-section" id="summary-section">
     <div class="summary-row">
       <span class="summary-label">Total Amount</span>
@@ -526,10 +517,10 @@
     </div>
     <div class="summary-row">
       <span class="summary-label">Payment</span>
-      <input type="number" inputmode="decimal" id="payment-input" class="payment-input" placeholder="0" oninput="updatePaymentAndDiff()">
+      <input type="number" inputmode="decimal" id="payment-input" class="payment-input" placeholder="0" oninput="updateDiff()">
     </div>
     <div class="summary-row">
-      <span class="summary-label">Difference (Change / Bal)</span>
+      <span class="summary-label">Difference (Sukli)</span>
       <span class="summary-value" id="diff-disp">0</span>
     </div>
   </div>
@@ -564,13 +555,13 @@
   const statusNote = document.getElementById('status-note');
   const nameInput = document.getElementById('entry-name');
   const paymentInput = document.getElementById('payment-input');
-  const summarySection = document.getElementById('summary-section');
   const recordListEl = document.getElementById('record-list');
   const recordCountEl = document.getElementById('record-count');
 
   const MAX_RECORDS = 10;
   const LABELS = ['R', 'P', 'L', 'M', 'C'];
   let isLocked = true;
+  let lastEnteredTotal = 0; // Holds total shown when ENTER is pressed
 
   function formatAmount(num) {
     return Math.round(num).toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -649,9 +640,9 @@
     }, 30000);
   });
 
-  // Calculate row amounts as QTY changes
+  // Rule 4: Automatic row calculation as QTY changes
   function calculate() {
-    let totalAmount = 0;
+    let currentRowTotal = 0;
     const currentMults = [];
 
     for (let i = 0; i < 5; i++) {
@@ -660,33 +651,47 @@
       const amount = qty * mult;
 
       document.getElementById(`amt-${i}`).textContent = formatAmount(amount);
-      totalAmount += amount;
+      currentRowTotal += amount;
       currentMults.push(multInputs[i].value);
     }
 
     localStorage.setItem('rplmc_multipliers', JSON.stringify(currentMults));
-    return Math.round(totalAmount);
+    updateDiff();
+    return Math.round(currentRowTotal);
   }
 
-  // Update Payment and Difference dynamically
-  function updatePaymentAndDiff() {
-    const totalAmount = calculate();
+  // Computes Sukli/Difference based on active Total Amount (either current input or last ENTERed total)
+  function updateDiff() {
+    const activeRowSum = getRowSum();
+    const referenceTotal = activeRowSum > 0 ? activeRowSum : lastEnteredTotal;
     const payment = parseFloat(paymentInput.value) || 0;
-    const diff = payment - totalAmount;
+    const diff = payment - referenceTotal;
 
     const diffDisp = document.getElementById('diff-disp');
     diffDisp.textContent = formatAmount(diff);
-    if (diff > 0) {
-      diffDisp.style.color = '#4ade80'; // Green for change
+
+    if (payment === 0 && referenceTotal === 0) {
+      diffDisp.style.color = 'var(--text)';
+    } else if (diff > 0) {
+      diffDisp.style.color = '#4ade80'; // Green for Sukli
     } else if (diff < 0) {
-      diffDisp.style.color = '#f87171'; // Red for balance
+      diffDisp.style.color = '#f87171'; // Red for Kulang/Balance
     } else {
       diffDisp.style.color = 'var(--text)';
     }
-    return { payment, diff };
   }
 
-  // Handle ENTER button tap
+  function getRowSum() {
+    let sum = 0;
+    for (let i = 0; i < 5; i++) {
+      const q = parseFloat(qtyInputs[i].value) || 0;
+      const m = parseFloat(multInputs[i].value) || 0;
+      sum += (q * m);
+    }
+    return Math.round(sum);
+  }
+
+  // Rules 1, 2, 3: Pressing ENTER shows Total Amount, saves ALL to record list, and clears inputs
   function handleEnter() {
     let totalQty = 0;
     let totalAmount = 0;
@@ -730,18 +735,22 @@
     records.unshift(newRecord);
     saveRecords(records);
 
-    // Show summary section with calculated values
-    summarySection.classList.add('visible');
+    // 1. Show Total Amount & Sukli on screen
+    lastEnteredTotal = roundedTotal;
     document.getElementById('total-amount-disp').textContent = formatAmount(roundedTotal);
-    updatePaymentAndDiff();
+    updateDiff();
 
-    // Clear All inputs for next entry
-    clearAllInputsOnly();
+    // 2. Clear inputs for next customer
+    qtyInputs.forEach(input => input.value = '');
+    nameInput.value = '';
+    paymentInput.value = '';
+    calculate();
+    qtyInputs[0].focus();
   }
 
-  // Delete with confirmation
+  // Rule 5: Delete with confirmation
   function deleteRecord(id) {
-    if (confirm('Are you sure you want to delete this record?')) {
+    if (confirm('Sigurado ka bang buburahin ang record na ito?')) {
       const records = getRecords().filter(item => item.id !== id);
       saveRecords(records);
     }
@@ -773,8 +782,8 @@
           </div>
         </div>
         <div class="rec-pay-diff">
-          <span>Pay: ${formatAmount(rec.payment || 0)}</span>
-          <span>Diff: ${formatAmount(rec.diff || 0)}</span>
+          <span>Payment: ${formatAmount(rec.payment || 0)}</span>
+          <span>Sukli/Diff: ${formatAmount(rec.diff || 0)}</span>
         </div>
       </div>
     `).join('');
@@ -786,17 +795,15 @@
     return div.innerHTML;
   }
 
-  function clearAllInputsOnly() {
+  // Master Clear Button
+  function clearAll() {
     qtyInputs.forEach(input => input.value = '');
     nameInput.value = '';
     paymentInput.value = '';
+    lastEnteredTotal = 0;
+    document.getElementById('total-amount-disp').textContent = '0';
     calculate();
     qtyInputs[0].focus();
-  }
-
-  function clearAll() {
-    clearAllInputsOnly();
-    summarySection.classList.remove('visible');
   }
 </script>
 
