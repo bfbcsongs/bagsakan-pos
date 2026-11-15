@@ -210,7 +210,7 @@
     background: #4ade80;
   }
 
-  /* Summary Section */
+  /* Summary Section (Total Amount, Payment, Difference) */
   .summary-section {
     display: none;
     background: #0b1324;
@@ -226,6 +226,11 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
+    border-bottom: 1px dashed var(--border);
+  }
+
+  .summary-row:last-child {
+    border-bottom: none;
   }
 
   .summary-label {
@@ -236,10 +241,36 @@
     color: var(--muted);
   }
 
+  .summary-value {
+    font-size: 1.15rem;
+    font-weight: 800;
+  }
+
   #total-amount-disp {
     color: var(--red-amount);
     font-size: 1.25rem;
-    font-weight: 800;
+  }
+
+  .payment-input {
+    width: 140px;
+    padding: 8px 10px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: #4ade80;
+    font-size: 1.15rem;
+    font-weight: 700;
+    text-align: right;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .payment-input:focus {
+    border-color: var(--accent);
+  }
+
+  #diff-disp {
+    font-size: 1.2rem;
   }
 
   .name-bar {
@@ -315,6 +346,7 @@
     border-radius: 8px;
     font-weight: 700;
     font-size: 0.82rem;
+    cursor: pointer;
   }
 
   .record-list {
@@ -393,6 +425,13 @@
     font-size: 0.9rem;
   }
 
+  .rec-pay-diff {
+    font-size: 0.75rem;
+    color: var(--muted);
+    display: flex;
+    gap: 12px;
+  }
+
   .btn-del-rec {
     background: rgba(239, 68, 68, 0.12);
     color: #f87171;
@@ -410,14 +449,13 @@
     margin-bottom: 12px;
   }
 
-  /* Print Stylesheet */
   @media print {
     body { background: white; color: black; padding: 0; }
     .container:not(:last-child), .top-bar, .action-bar, .summary-section, .name-bar, .record-actions, .btn-del-rec, .footer-note { display: none !important; }
     .container { border: none; box-shadow: none; max-width: 100%; }
     .record-list { max-height: none; overflow: visible; }
     .record-item { background: white; border: 1px solid #ccc; break-inside: avoid; }
-    .rec-name, .rec-time, .rec-breakdown, .rec-qty, .rec-amt { color: black !important; }
+    .rec-name, .rec-time, .rec-breakdown, .rec-qty, .rec-amt, .rec-pay-diff { color: black !important; }
   }
 </style>
 </head>
@@ -480,11 +518,19 @@
     <button class="btn-enter" onclick="handleEnter()">Enter</button>
   </div>
 
-  <!-- SUMMARY SECTION (Shows Total Amount upon Enter) -->
+  <!-- SUMMARY SECTION (Total Amount, Payment, Difference) -->
   <div class="summary-section" id="summary-section">
     <div class="summary-row">
-      <span class="summary-label">Total Amount Calculated</span>
+      <span class="summary-label">Total Amount</span>
       <span class="summary-value" id="total-amount-disp">0</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-label">Payment</span>
+      <input type="number" inputmode="decimal" id="payment-input" class="payment-input" placeholder="0" oninput="updatePaymentAndDiff()">
+    </div>
+    <div class="summary-row">
+      <span class="summary-label">Difference (Change / Bal)</span>
+      <span class="summary-value" id="diff-disp">0</span>
     </div>
   </div>
 
@@ -517,6 +563,7 @@
   const lockBtn = document.getElementById('lock-btn');
   const statusNote = document.getElementById('status-note');
   const nameInput = document.getElementById('entry-name');
+  const paymentInput = document.getElementById('payment-input');
   const summarySection = document.getElementById('summary-section');
   const recordListEl = document.getElementById('record-list');
   const recordCountEl = document.getElementById('record-count');
@@ -602,7 +649,7 @@
     }, 30000);
   });
 
-  // Automatic calculation as QTY or Multiplier inputs change
+  // Calculate row amounts as QTY changes
   function calculate() {
     let totalAmount = 0;
     const currentMults = [];
@@ -621,12 +668,29 @@
     return Math.round(totalAmount);
   }
 
+  // Update Payment and Difference dynamically
+  function updatePaymentAndDiff() {
+    const totalAmount = calculate();
+    const payment = parseFloat(paymentInput.value) || 0;
+    const diff = payment - totalAmount;
+
+    const diffDisp = document.getElementById('diff-disp');
+    diffDisp.textContent = formatAmount(diff);
+    if (diff > 0) {
+      diffDisp.style.color = '#4ade80'; // Green for change
+    } else if (diff < 0) {
+      diffDisp.style.color = '#f87171'; // Red for balance
+    } else {
+      diffDisp.style.color = 'var(--text)';
+    }
+    return { payment, diff };
+  }
+
   // Handle ENTER button tap
   function handleEnter() {
     let totalQty = 0;
     let totalAmount = 0;
     const breakdownParts = [];
-    const qtyValuesArray = Array.from(qtyInputs).map(inp => inp.value);
 
     for (let i = 0; i < 5; i++) {
       const q = parseFloat(qtyInputs[i].value) || 0;
@@ -639,6 +703,9 @@
     }
 
     const roundedTotal = Math.round(totalAmount);
+    const payment = parseFloat(paymentInput.value) || 0;
+    const diff = payment - roundedTotal;
+
     const rawName = nameInput.value.trim();
     const recordName = rawName !== '' ? rawName : 'N/A';
     const breakdownStr = breakdownParts.length > 0 ? breakdownParts.join(' | ') : 'No QTY';
@@ -655,18 +722,20 @@
       timestamp: getFormattedTimestamp(),
       totalQty: totalQty,
       totalAmount: roundedTotal,
-      breakdown: breakdownStr,
-      qtys: qtyValuesArray
+      payment: payment,
+      diff: diff,
+      breakdown: breakdownStr
     };
 
     records.unshift(newRecord);
     saveRecords(records);
 
-    // Show Total Amount on screen
+    // Show summary section with calculated values
     summarySection.classList.add('visible');
     document.getElementById('total-amount-disp').textContent = formatAmount(roundedTotal);
+    updatePaymentAndDiff();
 
-    // Clear All
+    // Clear All inputs for next entry
     clearAllInputsOnly();
   }
 
@@ -703,6 +772,10 @@
             <span class="rec-amt">${formatAmount(rec.totalAmount)}</span>
           </div>
         </div>
+        <div class="rec-pay-diff">
+          <span>Pay: ${formatAmount(rec.payment || 0)}</span>
+          <span>Diff: ${formatAmount(rec.diff || 0)}</span>
+        </div>
       </div>
     `).join('');
   }
@@ -716,11 +789,11 @@
   function clearAllInputsOnly() {
     qtyInputs.forEach(input => input.value = '');
     nameInput.value = '';
+    paymentInput.value = '';
     calculate();
     qtyInputs[0].focus();
   }
 
-  // Master Clear Button (resets inputs and hides summary)
   function clearAll() {
     clearAllInputsOnly();
     summarySection.classList.remove('visible');
