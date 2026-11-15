@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>RPLMC Calculator</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --border: #334155;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent-bg: rgba(56, 189, 248, 0.12);
+    --input-bg: #0f172a;
+    --locked-bg: #162032;
+  }
+
+  * {
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  body {
+    margin: 0;
+    padding: 16px;
+    background-color: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 540px;
+    background: var(--card);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  }
+
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+  }
+
+  .top-bar h1 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 8px;
+  }
+
+  button {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  button:active {
+    transform: scale(0.96);
+  }
+
+  .btn-lock {
+    background: rgba(56, 189, 248, 0.15);
+    color: var(--accent);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+  }
+
+  .btn-lock.unlocked {
+    background: rgba(250, 204, 21, 0.15);
+    color: #facc15;
+    border: 1px solid rgba(250, 204, 21, 0.4);
+  }
+
+  .btn-clear {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  /* Row 1: Header */
+  thead th {
+    background: #162032;
+    color: var(--muted);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 12px 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Column Widths */
+  th:nth-child(1), td:nth-child(1) { width: 18%; text-align: center; }
+  th:nth-child(2), td:nth-child(2) { width: 25%; text-align: center; }
+  th:nth-child(3), td:nth-child(3) { width: 27%; text-align: center; }
+  th:nth-child(4), td:nth-child(4) { width: 30%; text-align: right; padding-right: 12px; }
+
+  /* Rows 2-6: Data Rows */
+  tbody td {
+    padding: 10px 6px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  .code-badge {
+    display: inline-block;
+    font-weight: 800;
+    font-size: 1.05rem;
+    color: var(--accent);
+    background: var(--accent-bg);
+    padding: 6px 12px;
+    border-radius: 8px;
+  }
+
+  input[type="number"] {
+    width: 92%;
+    padding: 10px 6px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+    outline: none;
+    transition: all 0.2s;
+  }
+
+  input[type="number"]:focus {
+    border-color: var(--accent);
+  }
+
+  /* Locked Multiplier Styling */
+  .mult-input:disabled {
+    background: var(--locked-bg);
+    border-color: transparent;
+    color: #94a3b8;
+    cursor: not-allowed;
+    opacity: 0.95;
+  }
+
+  /* Unlocked Multiplier Highlight */
+  .mult-input:not(:disabled) {
+    border-color: rgba(250, 204, 21, 0.5);
+    background: #172033;
+    color: #fef08a;
+  }
+
+  input[type=number]::-webkit-inner-spin-button, 
+  input[type=number]::-webkit-outer-spin-button { 
+    -webkit-appearance: none; 
+    margin: 0; 
+  }
+
+  .amount-cell {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #e2e8f0;
+    word-break: break-all;
+  }
+
+  /* Row 7: Totals */
+  tfoot tr {
+    background: #0b1324;
+    font-weight: 800;
+  }
+
+  tfoot td {
+    padding: 14px 6px;
+    font-size: 1.05rem;
+    border-top: 2px solid var(--accent);
+  }
+
+  tfoot td:nth-child(1) {
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+  }
+
+  #total-qty {
+    color: var(--accent);
+    font-size: 1.15rem;
+  }
+
+  #total-amount {
+    color: #4ade80;
+    font-size: 1.15rem;
+    padding-right: 12px;
+  }
+
+  .footer-note {
+    margin-top: 12px;
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="top-bar">
+    <h1>RPLMC CALC</h1>
+    <div class="btn-group">
+      <button id="lock-btn" class="btn-lock" onclick="toggleLock()">🔒 Locked</button>
+      <button class="btn-clear" onclick="clearQty()">Clear QTY</button>
+    </div>
+  </div>
+
+  <table>
+    <!-- ROW 1: HEADER -->
+    <thead>
+      <tr>
+        <th>RPLMC</th>
+        <th>QTY</th>
+        <th>Multiplier</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+
+    <!-- ROWS 2 to 6: R, P, L, M, C -->
+    <tbody id="calc-body">
+      <tr>
+        <td><span class="code-badge">R</span></td>
+        <td><input type="number" inputmode="decimal" class="qty-input" data-row="0" placeholder="0" oninput="calculate()"></td>
+        <td><input type="number" inputmode="decimal" class="mult-input" data-row="0" placeholder="0" oninput="calculate()" disabled></td>
+        <td class="amount-cell" id="amt-0">0.00</td>
+      </tr>
+      <tr>
+        <td><span class="code-badge">P</span></td>
+        <td><input type="number" inputmode="decimal" class="qty-input" data-row="1" placeholder="0" oninput="calculate()"></td>
+        <td><input type="number" inputmode="decimal" class="mult-input" data-row="1" placeholder="0" oninput="calculate()" disabled></td>
+        <td class="amount-cell" id="amt-1">0.00</td>
+      </tr>
+      <tr>
+        <td><span class="code-badge">L</span></td>
+        <td><input type="number" inputmode="decimal" class="qty-input" data-row="2" placeholder="0" oninput="calculate()"></td>
+        <td><input type="number" inputmode="decimal" class="mult-input" data-row="2" placeholder="0" oninput="calculate()" disabled></td>
+        <td class="amount-cell" id="amt-2">0.00</td>
+      </tr>
+      <tr>
+        <td><span class="code-badge">M</span></td>
+        <td><input type="number" inputmode="decimal" class="qty-input" data-row="3" placeholder="0" oninput="calculate()"></td>
+        <td><input type="number" inputmode="decimal" class="mult-input" data-row="3" placeholder="0" oninput="calculate()" disabled></td>
+        <td class="amount-cell" id="amt-3">0.00</td>
+      </tr>
+      <tr>
+        <td><span class="code-badge">C</span></td>
+        <td><input type="number" inputmode="decimal" class="qty-input" data-row="4" placeholder="0" oninput="calculate()"></td>
+        <td><input type="number" inputmode="decimal" class="mult-input" data-row="4" placeholder="0" oninput="calculate()" disabled></td>
+        <td class="amount-cell" id="amt-4">0.00</td>
+      </tr>
+    </tbody>
+
+    <!-- ROW 7: TOTALS -->
+    <tfoot>
+      <tr>
+        <td>TOTAL</td>
+        <td id="total-qty">0</td>
+        <td>—</td>
+        <td id="total-amount">0.00</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<div class="footer-note" id="status-note">Multipliers are locked. Tap "Locked" to edit rates.</div>
+
+<script>
+  const qtyInputs = document.querySelectorAll('.qty-input');
+  const multInputs = document.querySelectorAll('.mult-input');
+  const lockBtn = document.getElementById('lock-btn');
+  const statusNote = document.getElementById('status-note');
+  let isLocked = true;
+
+  function formatMoney(num) {
+    return num.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  function formatQty(num) {
+    return num.toLocaleString('en-US', {
+      maximumFractionDigits: 4
+    });
+  }
+
+  // Toggle Lock/Unlock state for Multipliers
+  function toggleLock() {
+    isLocked = !isLocked;
+
+    multInputs.forEach(input => {
+      input.disabled = isLocked;
+    });
+
+    if (isLocked) {
+      lockBtn.innerHTML = '🔒 Locked';
+      lockBtn.classList.remove('unlocked');
+      statusNote.textContent = 'Multipliers locked & saved.';
+    } else {
+      lockBtn.innerHTML = '🔓 Unlocked';
+      lockBtn.classList.add('unlocked');
+      statusNote.textContent = 'Editing mode: Update multipliers, then tap to lock.';
+      multInputs[0].focus();
+    }
+  }
+
+  // Load saved multipliers on startup
+  window.addEventListener('DOMContentLoaded', () => {
+    const savedMults = JSON.parse(localStorage.getItem('rplmc_multipliers') || '[]');
+    const hasValues = savedMults.some(val => val !== '' && val !== undefined);
+
+    multInputs.forEach((input, index) => {
+      if (savedMults[index] !== undefined && savedMults[index] !== '') {
+        input.value = savedMults[index];
+      }
+    });
+
+    // If first time using (no saved multipliers yet), start unlocked so you can set them right away
+    if (!hasValues) {
+      toggleLock();
+    }
+
+    calculate();
+  });
+
+  // Core calculation logic
+  function calculate() {
+    let totalQty = 0;
+    let totalAmount = 0;
+    const currentMults = [];
+
+    for (let i = 0; i < 5; i++) {
+      const qty = parseFloat(qtyInputs[i].value) || 0;
+      const mult = parseFloat(multInputs[i].value) || 0;
+      const amount = qty * mult;
+
+      document.getElementById(`amt-${i}`).textContent = formatMoney(amount);
+
+      totalQty += qty;
+      totalAmount += amount;
+      currentMults.push(multInputs[i].value);
+    }
+
+    localStorage.setItem('rplmc_multipliers', JSON.stringify(currentMults));
+
+    document.getElementById('total-qty').textContent = formatQty(totalQty);
+    document.getElementById('total-amount').textContent = formatMoney(totalAmount);
+  }
+
+  function clearQty() {
+    qtyInputs.forEach(input => input.value = '');
+    calculate();
+    qtyInputs[0].focus();
+  }
+</script>
+
+</body>
+</html>
