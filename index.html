@@ -17,7 +17,6 @@
     --locked-bg: #162032;
     --red-amount: #f87171;
     --green-btn: #22c55e;
-    --amber-btn: #f59e0b;
   }
 
   * {
@@ -62,23 +61,6 @@
     font-weight: 700;
     letter-spacing: 0.5px;
     color: var(--accent);
-  }
-
-  .mode-indicator {
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 4px 8px;
-    border-radius: 6px;
-    background: rgba(56, 189, 248, 0.15);
-    color: var(--accent);
-    display: none;
-  }
-
-  .mode-indicator.editing {
-    display: inline-block;
-    background: rgba(245, 158, 11, 0.15);
-    color: var(--amber-btn);
-    border: 1px solid rgba(245, 158, 11, 0.3);
   }
 
   .btn-group {
@@ -127,7 +109,6 @@
     table-layout: fixed;
   }
 
-  /* Row 1: Header */
   thead th {
     background: #162032;
     color: var(--muted);
@@ -138,13 +119,11 @@
     border-bottom: 1px solid var(--border);
   }
 
-  /* Column Widths */
   th:nth-child(1), td:nth-child(1) { width: 18%; text-align: center; }
   th:nth-child(2), td:nth-child(2) { width: 25%; text-align: center; }
   th:nth-child(3), td:nth-child(3) { width: 27%; text-align: center; }
   th:nth-child(4), td:nth-child(4) { width: 30%; text-align: right; padding-right: 12px; }
 
-  /* Rows 2-6: Data Rows */
   tbody td {
     padding: 10px 6px;
     border-bottom: 1px solid var(--border);
@@ -206,17 +185,14 @@
     word-break: break-all;
   }
 
-  /* Action Bar (Enter or Save Edits) */
   .action-bar {
     padding: 12px 16px;
     background: #162032;
     border-bottom: 1px solid var(--border);
-    display: flex;
-    gap: 10px;
   }
 
-  .btn-action {
-    flex: 1;
+  .btn-enter {
+    width: 100%;
     padding: 12px;
     background: var(--green-btn);
     color: #052e16;
@@ -227,30 +203,14 @@
     letter-spacing: 0.8px;
     text-transform: uppercase;
     box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
+    cursor: pointer;
   }
 
-  .btn-action.editing {
-    background: var(--amber-btn);
-    color: #451a03;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+  .btn-enter:hover {
+    background: #4ade80;
   }
 
-  .btn-cancel-edit {
-    display: none;
-    padding: 12px 16px;
-    background: rgba(239, 68, 68, 0.15);
-    color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    border-radius: 10px;
-    font-size: 0.9rem;
-    font-weight: 700;
-  }
-
-  .btn-cancel-edit.visible {
-    display: inline-flex;
-  }
-
-  /* Summary Section: Total, Payment, Difference (Revealed on Enter) */
+  /* Summary Section */
   .summary-section {
     display: none;
     background: #0b1324;
@@ -266,11 +226,6 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    border-bottom: 1px dashed var(--border);
-  }
-
-  .summary-row:last-child {
-    border-bottom: none;
   }
 
   .summary-label {
@@ -281,43 +236,12 @@
     color: var(--muted);
   }
 
-  .summary-value {
-    font-size: 1.15rem;
-    font-weight: 800;
-  }
-
-  #total-qty-disp {
-    color: var(--accent);
-  }
-
   #total-amount-disp {
     color: var(--red-amount);
     font-size: 1.25rem;
+    font-weight: 800;
   }
 
-  .payment-input {
-    width: 140px;
-    padding: 8px 10px;
-    background: var(--input-bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: #4ade80;
-    font-size: 1.15rem;
-    font-weight: 700;
-    text-align: right;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-
-  .payment-input:focus {
-    border-color: var(--accent);
-  }
-
-  #diff-disp {
-    font-size: 1.2rem;
-  }
-
-  /* Name Bar */
   .name-bar {
     display: flex;
     align-items: center;
@@ -345,14 +269,8 @@
     font-size: 0.95rem;
     font-weight: 600;
     outline: none;
-    transition: border-color 0.2s;
   }
 
-  .name-bar input[type="text"]:focus {
-    border-color: var(--accent);
-  }
-
-  /* Records Section */
   .records-header {
     display: flex;
     justify-content: space-between;
@@ -380,6 +298,25 @@
     border: 1px solid var(--border);
   }
 
+  .record-actions {
+    display: flex;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #121a2d;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .btn-print {
+    flex: 1;
+    background: rgba(56, 189, 248, 0.15);
+    color: var(--accent);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    padding: 8px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.82rem;
+  }
+
   .record-list {
     padding: 10px 14px;
     display: flex;
@@ -404,13 +341,6 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
-  }
-
-  .record-item:hover {
-    border-color: var(--accent);
-    background: #162032;
   }
 
   .rec-top {
@@ -463,13 +393,6 @@
     font-size: 0.9rem;
   }
 
-  .rec-pay-diff {
-    font-size: 0.75rem;
-    color: var(--muted);
-    display: flex;
-    gap: 8px;
-  }
-
   .btn-del-rec {
     background: rgba(239, 68, 68, 0.12);
     color: #f87171;
@@ -477,6 +400,7 @@
     padding: 4px 8px;
     font-size: 0.72rem;
     border-radius: 6px;
+    cursor: pointer;
   }
 
   .footer-note {
@@ -485,13 +409,23 @@
     text-align: center;
     margin-bottom: 12px;
   }
+
+  /* Print Stylesheet */
+  @media print {
+    body { background: white; color: black; padding: 0; }
+    .container:not(:last-child), .top-bar, .action-bar, .summary-section, .name-bar, .record-actions, .btn-del-rec, .footer-note { display: none !important; }
+    .container { border: none; box-shadow: none; max-width: 100%; }
+    .record-list { max-height: none; overflow: visible; }
+    .record-item { background: white; border: 1px solid #ccc; break-inside: avoid; }
+    .rec-name, .rec-time, .rec-breakdown, .rec-qty, .rec-amt { color: black !important; }
+  }
 </style>
 </head>
 <body>
 
 <div class="container">
   <div class="top-bar">
-    <h1>RPLMC CALC <span id="mode-badge" class="mode-indicator">Editing Record</span></h1>
+    <h1>RPLMC CALC</h1>
     <div class="btn-group">
       <button id="lock-btn" class="btn-lock" onclick="toggleLock()">🔒 Locked</button>
       <button class="btn-clear" onclick="clearAll()">Clear</button>
@@ -499,7 +433,6 @@
   </div>
 
   <table>
-    <!-- ROW 1: HEADER -->
     <thead>
       <tr>
         <th>RPLMC</th>
@@ -508,64 +441,50 @@
         <th>Amount</th>
       </tr>
     </thead>
-
-    <!-- ROWS 2 to 6: R, P, L, M, C -->
     <tbody id="calc-body">
       <tr>
         <td><span class="code-badge">R</span></td>
-        <td><input type="number" inputmode="decimal" class="qty-input" data-row="0" placeholder="0" oninput="calculate()"></td>
-        <td><input type="number" inputmode="decimal" class="mult-input" data-row="0" placeholder="0" oninput="calculate()" disabled></td>
+        <td><input type="number" inputmode="decimal" class="qty-input" placeholder="0" oninput="calculate()"></td>
+        <td><input type="number" inputmode="decimal" class="mult-input" placeholder="0" oninput="calculate()" disabled></td>
         <td class="amount-cell" id="amt-0">0</td>
       </tr>
       <tr>
         <td><span class="code-badge">P</span></td>
-        <td><input type="number" inputmode="decimal" class="qty-input" data-row="1" placeholder="0" oninput="calculate()"></td>
-        <td><input type="number" inputmode="decimal" class="mult-input" data-row="1" placeholder="0" oninput="calculate()" disabled></td>
+        <td><input type="number" inputmode="decimal" class="qty-input" placeholder="0" oninput="calculate()"></td>
+        <td><input type="number" inputmode="decimal" class="mult-input" placeholder="0" oninput="calculate()" disabled></td>
         <td class="amount-cell" id="amt-1">0</td>
       </tr>
       <tr>
         <td><span class="code-badge">L</span></td>
-        <td><input type="number" inputmode="decimal" class="qty-input" data-row="2" placeholder="0" oninput="calculate()"></td>
-        <td><input type="number" inputmode="decimal" class="mult-input" data-row="2" placeholder="0" oninput="calculate()" disabled></td>
+        <td><input type="number" inputmode="decimal" class="qty-input" placeholder="0" oninput="calculate()"></td>
+        <td><input type="number" inputmode="decimal" class="mult-input" placeholder="0" oninput="calculate()" disabled></td>
         <td class="amount-cell" id="amt-2">0</td>
       </tr>
       <tr>
         <td><span class="code-badge">M</span></td>
-        <td><input type="number" inputmode="decimal" class="qty-input" data-row="3" placeholder="0" oninput="calculate()"></td>
-        <td><input type="number" inputmode="decimal" class="mult-input" data-row="3" placeholder="0" oninput="calculate()" disabled></td>
+        <td><input type="number" inputmode="decimal" class="qty-input" placeholder="0" oninput="calculate()"></td>
+        <td><input type="number" inputmode="decimal" class="mult-input" placeholder="0" oninput="calculate()" disabled></td>
         <td class="amount-cell" id="amt-3">0</td>
       </tr>
       <tr>
         <td><span class="code-badge">C</span></td>
-        <td><input type="number" inputmode="decimal" class="qty-input" data-row="4" placeholder="0" oninput="calculate()"></td>
-        <td><input type="number" inputmode="decimal" class="mult-input" data-row="4" placeholder="0" oninput="calculate()" disabled></td>
+        <td><input type="number" inputmode="decimal" class="qty-input" placeholder="0" oninput="calculate()"></td>
+        <td><input type="number" inputmode="decimal" class="mult-input" placeholder="0" oninput="calculate()" disabled></td>
         <td class="amount-cell" id="amt-4">0</td>
       </tr>
     </tbody>
   </table>
 
-  <!-- ACTION BAR (Enter or Save Edits) -->
+  <!-- ENTER BUTTON -->
   <div class="action-bar">
-    <button id="action-btn" class="btn-action" onclick="handleAction()">Enter</button>
-    <button id="cancel-edit-btn" class="btn-cancel-edit" onclick="cancelEditing()">Cancel</button>
+    <button class="btn-enter" onclick="handleEnter()">Enter</button>
   </div>
 
-  <!-- SUMMARY SECTION: Total, Payment, Difference (Revealed on Enter) -->
+  <!-- SUMMARY SECTION (Shows Total Amount upon Enter) -->
   <div class="summary-section" id="summary-section">
     <div class="summary-row">
-      <span class="summary-label">Total Amount</span>
+      <span class="summary-label">Total Amount Calculated</span>
       <span class="summary-value" id="total-amount-disp">0</span>
-    </div>
-    <div class="summary-row">
-      <span class="summary-label">Total QTY: <span id="total-qty-disp" style="color:var(--accent);">0</span></span>
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span class="summary-label" style="font-size:0.75rem;">Payment:</span>
-        <input type="number" inputmode="decimal" id="payment-input" class="payment-input" placeholder="0" oninput="updatePayment()">
-      </div>
-    </div>
-    <div class="summary-row">
-      <span class="summary-label">Difference (Change / Bal)</span>
-      <span class="summary-value" id="diff-disp">0</span>
     </div>
   </div>
 
@@ -582,8 +501,11 @@
     <h2>Daily Records</h2>
     <span class="record-count" id="record-count">0 / 10</span>
   </div>
+  <div class="record-actions">
+    <button class="btn-print" onclick="window.print()">🖨️ Print Records</button>
+  </div>
   <div class="record-list" id="record-list">
-    <div class="empty-records">No records yet today. Tap a record below to view/edit.</div>
+    <div class="empty-records">No records yet today.</div>
   </div>
 </div>
 
@@ -595,10 +517,6 @@
   const lockBtn = document.getElementById('lock-btn');
   const statusNote = document.getElementById('status-note');
   const nameInput = document.getElementById('entry-name');
-  const paymentInput = document.getElementById('payment-input');
-  const actionBtn = document.getElementById('action-btn');
-  const cancelEditBtn = document.getElementById('cancel-edit-btn');
-  const modeBadge = document.getElementById('mode-badge');
   const summarySection = document.getElementById('summary-section');
   const recordListEl = document.getElementById('record-list');
   const recordCountEl = document.getElementById('record-count');
@@ -606,18 +524,13 @@
   const MAX_RECORDS = 10;
   const LABELS = ['R', 'P', 'L', 'M', 'C'];
   let isLocked = true;
-  let editingRecordId = null;
 
   function formatAmount(num) {
-    return Math.round(num).toLocaleString('en-US', {
-      maximumFractionDigits: 0
-    });
+    return Math.round(num).toLocaleString('en-US', { maximumFractionDigits: 0 });
   }
 
   function formatQty(num) {
-    return num.toLocaleString('en-US', {
-      maximumFractionDigits: 4
-    });
+    return num.toLocaleString('en-US', { maximumFractionDigits: 4 });
   }
 
   function getTodayKey() {
@@ -627,13 +540,8 @@
 
   function getFormattedTimestamp() {
     return new Date().toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true
     });
   }
 
@@ -682,7 +590,7 @@
     });
 
     checkMidnightReset();
-    calculateRows();
+    calculate();
     renderRecords();
 
     setInterval(() => {
@@ -694,175 +602,80 @@
     }, 30000);
   });
 
-  // Calculate individual row amounts & save multipliers as you type
-  function calculateRows() {
+  // Automatic calculation as QTY or Multiplier inputs change
+  function calculate() {
+    let totalAmount = 0;
     const currentMults = [];
+
     for (let i = 0; i < 5; i++) {
       const qty = parseFloat(qtyInputs[i].value) || 0;
       const mult = parseFloat(multInputs[i].value) || 0;
       const amount = qty * mult;
 
       document.getElementById(`amt-${i}`).textContent = formatAmount(amount);
+      totalAmount += amount;
       currentMults.push(multInputs[i].value);
     }
+
     localStorage.setItem('rplmc_multipliers', JSON.stringify(currentMults));
+    return Math.round(totalAmount);
   }
 
-  // Compute totals for current inputs
-  function computeTotals() {
+  // Handle ENTER button tap
+  function handleEnter() {
     let totalQty = 0;
     let totalAmount = 0;
-
-    for (let i = 0; i < 5; i++) {
-      const qty = parseFloat(qtyInputs[i].value) || 0;
-      const mult = parseFloat(multInputs[i].value) || 0;
-      totalQty += qty;
-      totalAmount += (qty * mult);
-    }
-
-    const roundedTotal = Math.round(totalAmount);
-    const payment = parseFloat(paymentInput.value) || 0;
-    const diff = payment - roundedTotal;
-
-    return { totalQty, totalAmount: roundedTotal, payment, diff };
-  }
-
-  // Update payment and difference dynamically when payment input changes
-  function updatePayment() {
-    calculateRows();
-    const { totalQty, totalAmount, payment, diff } = computeTotals();
-
-    document.getElementById('total-qty-disp').textContent = formatQty(totalQty);
-    document.getElementById('total-amount-disp').textContent = formatAmount(totalAmount);
-
-    const diffDisp = document.getElementById('diff-disp');
-    diffDisp.textContent = formatAmount(diff);
-    if (diff > 0) {
-      diffDisp.style.color = '#4ade80';
-    } else if (diff < 0) {
-      diffDisp.style.color = '#f87171';
-    } else {
-      diffDisp.style.color = 'var(--text)';
-    }
-  }
-
-  // Handle Enter (New) or Save Changes (Edit existing)
-  function handleAction() {
-    calculateRows();
-    const { totalQty, totalAmount, payment, diff } = computeTotals();
-    const rawName = nameInput.value.trim();
-    const recordName = rawName !== '' ? rawName : 'N/A';
-
     const breakdownParts = [];
+    const qtyValuesArray = Array.from(qtyInputs).map(inp => inp.value);
+
     for (let i = 0; i < 5; i++) {
       const q = parseFloat(qtyInputs[i].value) || 0;
+      const m = parseFloat(multInputs[i].value) || 0;
+      totalQty += q;
+      totalAmount += (q * m);
       if (q > 0) {
         breakdownParts.push(`${LABELS[i]}:${formatQty(q)}`);
       }
     }
 
+    const roundedTotal = Math.round(totalAmount);
+    const rawName = nameInput.value.trim();
+    const recordName = rawName !== '' ? rawName : 'N/A';
     const breakdownStr = breakdownParts.length > 0 ? breakdownParts.join(' | ') : 'No QTY';
+
     const records = getRecords();
-    const qtyValuesArray = Array.from(qtyInputs).map(inp => inp.value);
-
-    if (editingRecordId !== null) {
-      // UPDATE EXISTING RECORD
-      const index = records.findIndex(r => r.id === editingRecordId);
-      if (index !== -1) {
-        records[index].name = recordName;
-        records[index].totalQty = totalQty;
-        records[index].totalAmount = totalAmount;
-        records[index].payment = payment;
-        records[index].diff = diff;
-        records[index].breakdown = breakdownStr;
-        records[index].qtys = qtyValuesArray;
-      }
-      saveRecords(records);
-      cancelEditing();
-    } else {
-      // ADD NEW RECORD
-      if (records.length >= MAX_RECORDS) {
-        alert('Record list is full (10/10). Please delete some entries from the list below to make space.');
-        return;
-      }
-
-      const newRecord = {
-        id: Date.now(),
-        name: recordName,
-        timestamp: getFormattedTimestamp(),
-        totalQty: totalQty,
-        totalAmount: totalAmount,
-        payment: payment,
-        diff: diff,
-        breakdown: breakdownStr,
-        qtys: qtyValuesArray
-      };
-
-      records.unshift(newRecord);
-      saveRecords(records);
-
-      // SHOW TOTAL SECTION & RESET CALCULATOR FOR NEXT ENTRY
-      summarySection.classList.add('visible');
-      document.getElementById('total-qty-disp').textContent = formatQty(totalQty);
-      document.getElementById('total-amount-disp').textContent = formatAmount(totalAmount);
-      updatePayment();
-
-      // Clear inputs for next transaction while keeping summary visible
-      qtyInputs.forEach(input => input.value = '');
-      nameInput.value = '';
-      paymentInput.value = '';
-      calculateRows();
-      qtyInputs[0].focus();
-    }
-  }
-
-  // Load record into calculator for editing
-  function loadRecordForEdit(id) {
-    const records = getRecords();
-    const rec = records.find(r => r.id === id);
-    if (!rec) return;
-
-    editingRecordId = rec.id;
-
-    if (rec.qtys && Array.isArray(rec.qtys)) {
-      qtyInputs.forEach((input, idx) => {
-        input.value = rec.qtys[idx] !== undefined ? rec.qtys[idx] : '';
-      });
-    } else {
-      qtyInputs.forEach(input => input.value = '');
+    if (records.length >= MAX_RECORDS) {
+      alert('Record list is full (10/10). Please delete some entries to make space.');
+      return;
     }
 
-    nameInput.value = rec.name !== 'N/A' ? rec.name : '';
-    paymentInput.value = rec.payment !== undefined ? rec.payment : '';
+    const newRecord = {
+      id: Date.now(),
+      name: recordName,
+      timestamp: getFormattedTimestamp(),
+      totalQty: totalQty,
+      totalAmount: roundedTotal,
+      breakdown: breakdownStr,
+      qtys: qtyValuesArray
+    };
 
-    calculateRows();
-    summarySection.classList.add('visible');
-    updatePayment();
-
-    actionBtn.textContent = 'Save Changes';
-    actionBtn.classList.add('editing');
-    cancelEditBtn.classList.add('visible');
-    modeBadge.classList.add('editing');
-
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  function cancelEditing() {
-    editingRecordId = null;
-    actionBtn.textContent = 'Enter';
-    actionBtn.classList.remove('editing');
-    cancelEditBtn.classList.remove('visible');
-    modeBadge.classList.remove('editing');
-    clearAll();
-  }
-
-  function deleteRecord(event, id) {
-    event.stopPropagation();
-    if (editingRecordId === id) {
-      cancelEditing();
-    }
-    const records = getRecords().filter(item => item.id !== id);
+    records.unshift(newRecord);
     saveRecords(records);
+
+    // Show Total Amount on screen
+    summarySection.classList.add('visible');
+    document.getElementById('total-amount-disp').textContent = formatAmount(roundedTotal);
+
+    // Clear All
+    clearAllInputsOnly();
+  }
+
+  // Delete with confirmation
+  function deleteRecord(id) {
+    if (confirm('Are you sure you want to delete this record?')) {
+      const records = getRecords().filter(item => item.id !== id);
+      saveRecords(records);
+    }
   }
 
   function renderRecords() {
@@ -870,18 +683,18 @@
     recordCountEl.textContent = `${records.length} / ${MAX_RECORDS}`;
 
     if (records.length === 0) {
-      recordListEl.innerHTML = '<div class="empty-records">No records yet today. Tap a record below to view/edit.</div>';
+      recordListEl.innerHTML = '<div class="empty-records">No records yet today.</div>';
       return;
     }
 
     recordListEl.innerHTML = records.map((rec, idx) => `
-      <div class="record-item" onclick="loadRecordForEdit(${rec.id})">
+      <div class="record-item">
         <div class="rec-top">
           <div>
             <span class="rec-name">#${records.length - idx} — ${escapeHtml(rec.name)}</span>
             <div class="rec-time">${rec.timestamp}</div>
           </div>
-          <button class="btn-del-rec" onclick="deleteRecord(event, ${rec.id})">Delete</button>
+          <button class="btn-del-rec" onclick="deleteRecord(${rec.id})">Delete</button>
         </div>
         <div class="rec-mid">
           <div class="rec-breakdown">${rec.breakdown}</div>
@@ -889,10 +702,6 @@
             <span class="rec-qty">QTY: ${formatQty(rec.totalQty)}</span>
             <span class="rec-amt">${formatAmount(rec.totalAmount)}</span>
           </div>
-        </div>
-        <div class="rec-pay-diff">
-          <span>Pay: ${formatAmount(rec.payment || 0)}</span>
-          <span>Diff: ${formatAmount(rec.diff || 0)}</span>
         </div>
       </div>
     `).join('');
@@ -904,13 +713,17 @@
     return div.innerHTML;
   }
 
-  function clearAll() {
+  function clearAllInputsOnly() {
     qtyInputs.forEach(input => input.value = '');
     nameInput.value = '';
-    paymentInput.value = '';
-    summarySection.classList.remove('visible');
-    calculateRows();
+    calculate();
     qtyInputs[0].focus();
+  }
+
+  // Master Clear Button (resets inputs and hides summary)
+  function clearAll() {
+    clearAllInputsOnly();
+    summarySection.classList.remove('visible');
   }
 </script>
 
