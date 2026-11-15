@@ -206,7 +206,7 @@
     word-break: break-all;
   }
 
-  /* Enter / Save Action Bar */
+  /* Action Bar (Enter or Save Edits) */
   .action-bar {
     padding: 12px 16px;
     background: #162032;
@@ -250,10 +250,15 @@
     display: inline-flex;
   }
 
-  /* Summary Section: Total, Payment, Difference */
+  /* Summary Section: Total, Payment, Difference (Revealed on Enter) */
   .summary-section {
+    display: none;
     background: #0b1324;
     border-bottom: 1px solid var(--border);
+  }
+
+  .summary-section.visible {
+    display: block;
   }
 
   .summary-row {
@@ -290,7 +295,6 @@
     font-size: 1.25rem;
   }
 
-  /* Payment Input Field */
   .payment-input {
     width: 140px;
     padding: 8px 10px;
@@ -546,8 +550,8 @@
     <button id="cancel-edit-btn" class="btn-cancel-edit" onclick="cancelEditing()">Cancel</button>
   </div>
 
-  <!-- SUMMARY SECTION (Total, Payment, Difference) -->
-  <div class="summary-section">
+  <!-- SUMMARY SECTION: Total, Payment, Difference (Revealed on Enter) -->
+  <div class="summary-section" id="summary-section">
     <div class="summary-row">
       <span class="summary-label">Total Amount</span>
       <span class="summary-value" id="total-amount-disp">0</span>
@@ -556,7 +560,7 @@
       <span class="summary-label">Total QTY: <span id="total-qty-disp" style="color:var(--accent);">0</span></span>
       <div style="display:flex; align-items:center; gap:8px;">
         <span class="summary-label" style="font-size:0.75rem;">Payment:</span>
-        <input type="number" inputmode="decimal" id="payment-input" class="payment-input" placeholder="0" oninput="calculate()">
+        <input type="number" inputmode="decimal" id="payment-input" class="payment-input" placeholder="0" oninput="updatePayment()">
       </div>
     </div>
     <div class="summary-row">
@@ -595,13 +599,14 @@
   const actionBtn = document.getElementById('action-btn');
   const cancelEditBtn = document.getElementById('cancel-edit-btn');
   const modeBadge = document.getElementById('mode-badge');
+  const summarySection = document.getElementById('summary-section');
   const recordListEl = document.getElementById('record-list');
   const recordCountEl = document.getElementById('record-count');
 
   const MAX_RECORDS = 10;
   const LABELS = ['R', 'P', 'L', 'M', 'C'];
   let isLocked = true;
-  let editingRecordId = null; // Holds ID if we are currently editing an existing record
+  let editingRecordId = null;
 
   function formatAmount(num) {
     return Math.round(num).toLocaleString('en-US', {
@@ -677,7 +682,7 @@
     });
 
     checkMidnightReset();
-    calculate();
+    calculateRows();
     renderRecords();
 
     setInterval(() => {
@@ -689,50 +694,62 @@
     }, 30000);
   });
 
-  // Live calculation for Row amounts, Totals, Payment, and Difference
-  function calculate() {
-    let totalQty = 0;
-    let totalAmount = 0;
+  // Calculate individual row amounts & save multipliers as you type
+  function calculateRows() {
     const currentMults = [];
-
     for (let i = 0; i < 5; i++) {
       const qty = parseFloat(qtyInputs[i].value) || 0;
       const mult = parseFloat(multInputs[i].value) || 0;
       const amount = qty * mult;
 
       document.getElementById(`amt-${i}`).textContent = formatAmount(amount);
-
-      totalQty += qty;
-      totalAmount += amount;
       currentMults.push(multInputs[i].value);
     }
-
     localStorage.setItem('rplmc_multipliers', JSON.stringify(currentMults));
+  }
+
+  // Compute totals for current inputs
+  function computeTotals() {
+    let totalQty = 0;
+    let totalAmount = 0;
+
+    for (let i = 0; i < 5; i++) {
+      const qty = parseFloat(qtyInputs[i].value) || 0;
+      const mult = parseFloat(multInputs[i].value) || 0;
+      totalQty += qty;
+      totalAmount += (qty * mult);
+    }
 
     const roundedTotal = Math.round(totalAmount);
     const payment = parseFloat(paymentInput.value) || 0;
     const diff = payment - roundedTotal;
 
-    document.getElementById('total-qty-disp.textContent') // safety
+    return { totalQty, totalAmount: roundedTotal, payment, diff };
+  }
+
+  // Update payment and difference dynamically when payment input changes
+  function updatePayment() {
+    calculateRows();
+    const { totalQty, totalAmount, payment, diff } = computeTotals();
+
     document.getElementById('total-qty-disp').textContent = formatQty(totalQty);
-    document.getElementById('total-amount-disp').textContent = formatAmount(roundedTotal);
+    document.getElementById('total-amount-disp').textContent = formatAmount(totalAmount);
 
     const diffDisp = document.getElementById('diff-disp');
     diffDisp.textContent = formatAmount(diff);
     if (diff > 0) {
-      diffDisp.style.color = '#4ade80'; // Change / Positive
+      diffDisp.style.color = '#4ade80';
     } else if (diff < 0) {
-      diffDisp.style.color = '#f87171'; // Balance / Negative
+      diffDisp.style.color = '#f87171';
     } else {
       diffDisp.style.color = 'var(--text)';
     }
-
-    return { totalQty, totalAmount: roundedTotal, payment, diff };
   }
 
-  // Handle Enter (New) or Save (Edit existing)
+  // Handle Enter (New) or Save Changes (Edit existing)
   function handleAction() {
-    const { totalQty, totalAmount, payment, diff } = calculate();
+    calculateRows();
+    const { totalQty, totalAmount, payment, diff } = computeTotals();
     const rawName = nameInput.value.trim();
     const recordName = rawName !== '' ? rawName : 'N/A';
 
@@ -746,8 +763,6 @@
 
     const breakdownStr = breakdownParts.length > 0 ? breakdownParts.join(' | ') : 'No QTY';
     const records = getRecords();
-
-    // Capture exact qtys for reloading into calculator later
     const qtyValuesArray = Array.from(qtyInputs).map(inp => inp.value);
 
     if (editingRecordId !== null) {
@@ -785,11 +800,23 @@
 
       records.unshift(newRecord);
       saveRecords(records);
-      clearAll(); // Reset calculator after successful Enter
+
+      // SHOW TOTAL SECTION & RESET CALCULATOR FOR NEXT ENTRY
+      summarySection.classList.add('visible');
+      document.getElementById('total-qty-disp').textContent = formatQty(totalQty);
+      document.getElementById('total-amount-disp').textContent = formatAmount(totalAmount);
+      updatePayment();
+
+      // Clear inputs for next transaction while keeping summary visible
+      qtyInputs.forEach(input => input.value = '');
+      nameInput.value = '';
+      paymentInput.value = '';
+      calculateRows();
+      qtyInputs[0].focus();
     }
   }
 
-  // Load a record into the calculator to view and edit
+  // Load record into calculator for editing
   function loadRecordForEdit(id) {
     const records = getRecords();
     const rec = records.find(r => r.id === id);
@@ -797,7 +824,6 @@
 
     editingRecordId = rec.id;
 
-    // Populate quantities
     if (rec.qtys && Array.isArray(rec.qtys)) {
       qtyInputs.forEach((input, idx) => {
         input.value = rec.qtys[idx] !== undefined ? rec.qtys[idx] : '';
@@ -809,9 +835,10 @@
     nameInput.value = rec.name !== 'N/A' ? rec.name : '';
     paymentInput.value = rec.payment !== undefined ? rec.payment : '';
 
-    calculate();
+    calculateRows();
+    summarySection.classList.add('visible');
+    updatePayment();
 
-    // Switch UI to editing mode
     actionBtn.textContent = 'Save Changes';
     actionBtn.classList.add('editing');
     cancelEditBtn.classList.add('visible');
@@ -820,7 +847,6 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // Cancel editing mode
   function cancelEditing() {
     editingRecordId = null;
     actionBtn.textContent = 'Enter';
@@ -831,7 +857,7 @@
   }
 
   function deleteRecord(event, id) {
-    event.stopPropagation(); // Prevent triggering loadRecordForEdit
+    event.stopPropagation();
     if (editingRecordId === id) {
       cancelEditing();
     }
@@ -839,7 +865,6 @@
     saveRecords(records);
   }
 
-  // Render daily record list
   function renderRecords() {
     const records = getRecords();
     recordCountEl.textContent = `${records.length} / ${MAX_RECORDS}`;
@@ -879,12 +904,12 @@
     return div.innerHTML;
   }
 
-  // Clear inputs and reset calculator state
   function clearAll() {
     qtyInputs.forEach(input => input.value = '');
     nameInput.value = '';
     paymentInput.value = '';
-    calculate();
+    summarySection.classList.remove('visible');
+    calculateRows();
     qtyInputs[0].focus();
   }
 </script>
