@@ -113,7 +113,6 @@
   th:nth-child(3), td:nth-child(3) { width: 28%; text-align: center; }
   th:nth-child(4), td:nth-child(4) { width: 30%; text-align: right; padding-right: 8px; }
 
-  /* Ultra-compact rows para laging kita kahit may keyboard */
   tbody td {
     padding: 4px 2px;
     border-bottom: 1px solid var(--border);
@@ -492,7 +491,7 @@
 <div class="container" id="printable-records-container">
   <div class="records-header">
     <h2>Daily Records</h2>
-    <span class="record-count" id="record-count">0 / 10</span>
+    <span class="record-count" id="record-count">0 Days</span>
   </div>
   <div class="record-actions" id="record-action-btns">
     <button class="btn-img" onclick="exportRecordsAsImage()">📸 Save/Share Image</button>
@@ -502,7 +501,7 @@
   </div>
 </div>
 
-<div class="footer-note" id="status-note">Multipliers locked by default. Records auto-reset at 12:00 AM midnight.</div>
+<div class="footer-note" id="status-note">Multipliers locked by default. Stores up to 10 days of records (FIFO loop).</div>
 
 <script>
   const qtyInputs = document.querySelectorAll('.qty-input');
@@ -515,7 +514,7 @@
   const recordListEl = document.getElementById('record-list');
   const recordCountEl = document.getElementById('record-count');
 
-  const MAX_RECORDS = 10;
+  const MAX_DAYS_HISTORY = 10; // 10 days loop on local storage
   const LABELS = ['R', 'P', 'L', 'M', 'C'];
   let isLocked = true;
   let activeRecordId = null;
@@ -540,24 +539,40 @@
     });
   }
 
-  function checkMidnightReset() {
-    const savedDate = localStorage.getItem('rplmc_records_date');
-    const today = getTodayKey();
-    if (savedDate !== today) {
-      localStorage.setItem('rplmc_records', JSON.stringify([]));
-      localStorage.setItem('rplmc_records_date', today);
+  // Manages 10-day history loop storage structure: { "YYYY-MM-DD": [records...] }
+  function getAllDaysHistory() {
+    try {
+      return JSON.parse(localStorage.getItem('rplmc_history_days') || '{}');
+    } catch(e) {
+      return {};
     }
   }
 
-  function getRecords() {
-    checkMidnightReset();
-    return JSON.parse(localStorage.getItem('rplmc_records') || '[]');
+  function saveAllDaysHistory(historyObj) {
+    // Enforce 10-day loop limit (FIFO: oldest day deleted if > 10 days)
+    let keys = Object.keys(historyObj).sort();
+    if (keys.length > MAX_DAYS_HISTORY) {
+      const excessCount = keys.length - MAX_DAYS_HISTORY;
+      for (let i = 0; i < excessCount; i++) {
+        delete historyObj[keys[i]];
+      }
+    }
+    localStorage.setItem('rplmc_history_days', JSON.stringify(historyObj));
+    renderRecords();
   }
 
-  function saveRecords(records) {
-    localStorage.setItem('rplmc_records', JSON.stringify(records));
-    localStorage.setItem('rplmc_records_date', getTodayKey());
-    renderRecords();
+  // Get records specifically for today
+  function getRecords() {
+    const historyObj = getAllDaysHistory();
+    const today = getTodayKey();
+    return historyObj[today] || [];
+  }
+
+  function saveTodayRecords(todayRecords) {
+    const historyObj = getAllDaysHistory();
+    const today = getTodayKey();
+    historyObj[today] = todayRecords;
+    saveAllDaysHistory(historyObj);
   }
 
   function toggleLock() {
@@ -584,11 +599,9 @@
       }
     });
 
-    checkMidnightReset();
     calculate();
     renderRecords();
 
-    // Auto-scroll to top when any input gets focus so keyboard doesn't block it
     const allInputs = document.querySelectorAll('input');
     allInputs.forEach(input => {
       input.addEventListener('focus', () => {
@@ -598,12 +611,9 @@
       });
     });
 
+    // Check date change every 30 seconds to handle 12:00 AM midnight reset smoothly
     setInterval(() => {
-      const savedDate = localStorage.getItem('rplmc_records_date');
-      if (savedDate && savedDate !== getTodayKey()) {
-        checkMidnightReset();
-        renderRecords();
-      }
+      renderRecords();
     }, 30000);
   });
 
@@ -696,7 +706,7 @@
       records[index].payment = payment;
       records[index].diff = diff;
       records[index].breakdown = breakdownStr;
-      saveRecords(records);
+      saveTodayRecords(records);
     }
   }
 
@@ -730,10 +740,6 @@
       return;
     }
 
-    if (records.length >= MAX_RECORDS) {
-      records.pop(); 
-    }
-
     activeRecordId = Date.now();
     const newRecord = {
       id: activeRecordId,
@@ -747,65 +753,95 @@
     };
 
     records.unshift(newRecord);
-    saveRecords(records);
+    saveTodayRecords(records);
 
     summarySection.classList.add('visible');
     document.getElementById('total-amount-disp').textContent = formatAmount(roundedTotal);
     updatePaymentLive();
   }
 
+  // Export full list image (expands max-height temporarily to capture everything)
   function exportRecordsAsImage() {
     const actionBtn = document.getElementById('record-action-btns');
+    const recordListContainer = document.getElementById('record-list');
+    
     actionBtn.style.display = 'none';
+    
+    const originalMaxHeight = recordListContainer.style.maxHeight;
+    const originalOverflow = recordListContainer.style.overflowY;
+    recordListContainer.style.maxHeight = 'none';
+    recordListContainer.style.overflowY = 'visible';
 
     const targetElement = document.getElementById('printable-records-container');
 
     html2canvas(targetElement, {
       backgroundColor: '#1e293b',
-      scale: 2
+      scale: 2,
+      windowWidth: targetElement.scrollWidth,
+      windowHeight: targetElement.scrollHeight
     }).then(canvas => {
       actionBtn.style.display = 'flex';
+      recordListContainer.style.maxHeight = originalMaxHeight;
+      recordListContainer.style.overflowY = originalOverflow;
+
       const link = document.createElement('a');
       link.download = `RPLMC-Records-${getTodayKey()}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     }).catch(err => {
       actionBtn.style.display = 'flex';
+      recordListContainer.style.maxHeight = originalMaxHeight;
+      recordListContainer.style.overflowY = originalOverflow;
       alert('May nangyaring error sa paggawa ng image. Subukang muli.');
       console.error(err);
     });
   }
 
   function renderRecords() {
-    const records = getRecords();
-    recordCountEl.textContent = `${records.length} / ${MAX_RECORDS}`;
+    const historyObj = getAllDaysHistory();
+    const daysKeys = Object.keys(historyObj).sort().reverse(); // Newest day first
+    
+    recordCountEl.textContent = `${daysKeys.length} / ${MAX_DAYS_HISTORY} Days`;
 
-    if (records.length === 0) {
-      recordListEl.innerHTML = '<div class="empty-records">No records yet today.</div>';
+    if (daysKeys.length === 0) {
+      recordListEl.innerHTML = '<div class="empty-records">No records saved yet.</div>';
       return;
     }
 
-    recordListEl.innerHTML = records.map((rec, idx) => `
-      <div class="record-item" ${rec.id === activeRecordId ? 'style="border-color: var(--accent);"' : ''}>
-        <div class="rec-top">
-          <div>
-            <span class="rec-name">#${records.length - idx} — ${escapeHtml(rec.name)}</span>
-            <div class="rec-time">${rec.timestamp}</div>
+    let htmlContent = '';
+    daysKeys.forEach(dayKey => {
+      const dayRecords = historyObj[dayKey] || [];
+      if (dayRecords.length === 0) return;
+
+      // Day header separator
+      htmlContent += `<div style="background:#162032; color:var(--accent); font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:4px; margin-top:4px;">Date: ${dayKey}</div>`;
+
+      dayRecords.forEach((rec, idx) => {
+        htmlContent += `
+          <div class="record-item" ${rec.id === activeRecordId ? 'style="border-color: var(--accent);"' : ''}>
+            <div class="rec-top">
+              <div>
+                <span class="rec-name">#${dayRecords.length - idx} — ${escapeHtml(rec.name)}</span>
+                <div class="rec-time">${rec.timestamp}</div>
+              </div>
+            </div>
+            <div class="rec-mid">
+              <div class="rec-breakdown">${rec.breakdown}</div>
+              <div class="rec-stats">
+                <span class="rec-qty">QTY: ${formatQty(rec.totalQty)}</span>
+                <span class="rec-amt">${formatAmount(rec.totalAmount)}</span>
+              </div>
+            </div>
+            <div class="rec-pay-diff">
+              <span>Payment: ${formatAmount(rec.payment || 0)}</span>
+              <span>Sukli/Diff: ${formatAmount(rec.diff || 0)}</span>
+            </div>
           </div>
-        </div>
-        <div class="rec-mid">
-          <div class="rec-breakdown">${rec.breakdown}</div>
-          <div class="rec-stats">
-            <span class="rec-qty">QTY: ${formatQty(rec.totalQty)}</span>
-            <span class="rec-amt">${formatAmount(rec.totalAmount)}</span>
-          </div>
-        </div>
-        <div class="rec-pay-diff">
-          <span>Payment: ${formatAmount(rec.payment || 0)}</span>
-          <span>Sukli/Diff: ${formatAmount(rec.diff || 0)}</span>
-        </div>
-      </div>
-    `).join('');
+        `;
+      });
+    });
+
+    recordListEl.innerHTML = htmlContent || '<div class="empty-records">No records saved yet.</div>';
   }
 
   function escapeHtml(str) {
