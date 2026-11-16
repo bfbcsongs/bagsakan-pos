@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>RPLMC Calculator</title>
+<!-- html2canvas library para maging image ang records list -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root {
     --bg: #0f172a;
@@ -331,7 +333,7 @@
     border-bottom: 1px solid var(--border);
   }
 
-  .btn-print {
+  .btn-img {
     flex: 1;
     background: rgba(56, 189, 248, 0.15);
     color: var(--accent);
@@ -433,15 +435,6 @@
     text-align: center;
     margin-bottom: 12px;
   }
-
-  @media print {
-    body { background: white; color: black; padding: 0; }
-    .container:not(:last-child), .top-bar, .action-bar, .summary-section, .name-bar, .record-actions, .footer-note { display: none !important; }
-    .container { border: none; box-shadow: none; max-width: 100%; }
-    .record-list { max-height: none; overflow: visible; }
-    .record-item { background: white; border: 1px solid #ccc; break-inside: avoid; }
-    .rec-name, .rec-time, .rec-breakdown, .rec-qty, .rec-amt, .rec-pay-diff { color: black !important; }
-  }
 </style>
 </head>
 <body>
@@ -503,7 +496,7 @@
     <button class="btn-enter" onclick="handleEnter()">Enter</button>
   </div>
 
-  <!-- SUMMARY SECTION (Appears upon tapping ENTER, updates live as ledger changes) -->
+  <!-- SUMMARY SECTION -->
   <div class="summary-section" id="summary-section">
     <div class="summary-row">
       <span class="summary-label">Total Amount</span>
@@ -526,14 +519,14 @@
   </div>
 </div>
 
-<!-- RECORD LIST CONTAINER -->
-<div class="container">
+<!-- RECORD LIST CONTAINER (Ito ang madi-download as Image) -->
+<div class="container" id="printable-records-container">
   <div class="records-header">
     <h2>Daily Records</h2>
     <span class="record-count" id="record-count">0 / 10</span>
   </div>
-  <div class="record-actions">
-    <button class="btn-print" onclick="window.print()">🖨️ Print Records</button>
+  <div class="record-actions" id="record-action-btns">
+    <button class="btn-img" onclick="exportRecordsAsImage()">📸 Save/Share Image</button>
   </div>
   <div class="record-list" id="record-list">
     <div class="empty-records">No records yet today.</div>
@@ -556,7 +549,7 @@
   const MAX_RECORDS = 10;
   const LABELS = ['R', 'P', 'L', 'M', 'C'];
   let isLocked = true;
-  let activeRecordId = null; // Tracks current open record being auto-updated after ENTER
+  let activeRecordId = null;
 
   function formatAmount(num) {
     return Math.round(num).toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -635,7 +628,6 @@
     }, 30000);
   });
 
-  // Calculate row amounts and live-update record if ENTER has been tapped
   function calculate() {
     let totalAmount = 0;
     const currentMults = [];
@@ -673,9 +665,9 @@
     if (payment === 0 && totalAmount === 0) {
       diffDisp.style.color = 'var(--text)';
     } else if (diff > 0) {
-      diffDisp.style.color = '#4ade80'; // Green for Sukli
+      diffDisp.style.color = '#4ade80';
     } else if (diff < 0) {
-      diffDisp.style.color = '#f87171'; // Red for Kulang/Balance
+      diffDisp.style.color = '#f87171';
     } else {
       diffDisp.style.color = 'var(--text)';
     }
@@ -692,7 +684,6 @@
     return Math.round(sum);
   }
 
-  // Active Live Record Updating after ENTER is tapped (until CLEAR is tapped)
   function updateLiveRecord() {
     if (!activeRecordId) return;
 
@@ -730,7 +721,6 @@
     }
   }
 
-  // Tapping ENTER registers record to list and starts active live tracking
   function handleEnter() {
     let totalQty = 0;
     let totalAmount = 0;
@@ -757,12 +747,10 @@
     const records = getRecords();
 
     if (activeRecordId) {
-      // If ENTER was already tapped for this session, just update it
       updateLiveRecord();
       return;
     }
 
-    // FIFO Loop (10 records max)
     if (records.length >= MAX_RECORDS) {
       records.pop(); 
     }
@@ -785,6 +773,31 @@
     summarySection.classList.add('visible');
     document.getElementById('total-amount-disp').textContent = formatAmount(roundedTotal);
     updatePaymentLive();
+  }
+
+  // Feature: I-convert ang Daily Records container into Image (PNG) ready for Messenger
+  function exportRecordsAsImage() {
+    const actionBtn = document.getElementById('record-action-btns');
+    actionBtn.style.display = 'none'; // Itago muna ang button sa image
+
+    const targetElement = document.getElementById('printable-records-container');
+
+    html2canvas(targetElement, {
+      backgroundColor: '#1e293b',
+      scale: 2 // Mataas na kalidad / HD image
+    }).then(canvas => {
+      actionBtn.style.display = 'flex'; // Ibalik ang button
+
+      // I-download bilang PNG file
+      const link = document.createElement('a');
+      link.download = `RPLMC-Records-${getTodayKey()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }).catch(err => {
+      actionBtn.style.display = 'flex';
+      alert('May nangyaring error sa paggawa ng image. Subukang muli.');
+      console.error(err);
+    });
   }
 
   function renderRecords() {
@@ -825,7 +838,6 @@
     return div.innerHTML;
   }
 
-  // CLEAR button clears everything, resets active record tracking, and gets ready for new entry
   function clearAll() {
     qtyInputs.forEach(input => input.value = '');
     nameInput.value = '';
