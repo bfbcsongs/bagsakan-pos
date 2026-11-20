@@ -73,6 +73,7 @@
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
+    touch-action: manipulation;
   }
 
   .btn-lock {
@@ -158,10 +159,10 @@
     color: #fef08a;
   }
 
-  input[type=number]::-webkit-inner-spin-button, 
-  input[type=number]::-webkit-outer-spin-button { 
-    -webkit-appearance: none; 
-    margin: 0; 
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
   }
 
   .amount-cell {
@@ -314,20 +315,82 @@
     cursor: pointer;
   }
 
-  .record-list {
+  .today-section {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    background: #131c2e;
+  }
+
+  .today-title {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #4ade80;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .folders-section {
     padding: 6px 10px;
     display: flex;
     flex-direction: column;
     gap: 6px;
-    max-height: 220px;
+    max-height: 260px;
     overflow-y: auto;
+  }
+
+  .folder-card {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #121a2d;
+    overflow: hidden;
+  }
+
+  .folder-btn {
+    width: 100%;
+    background: #162032;
+    color: var(--text);
+    border: none;
+    border-radius: 0;
+    padding: 7px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-align: left;
+  }
+
+  .folder-btn.current-day {
+    color: var(--accent);
+  }
+
+  .folder-meta {
+    font-size: 0.68rem;
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  .folder-body {
+    display: none;
+    padding: 6px 8px;
+    flex-direction: column;
+    gap: 6px;
+    background: #0d1526;
+    border-top: 1px solid var(--border);
+  }
+
+  .folder-body.open {
+    display: flex;
   }
 
   .empty-records {
     text-align: center;
     color: var(--muted);
     font-size: 0.75rem;
-    padding: 10px 0;
+    padding: 8px 0;
   }
 
   .record-item {
@@ -338,6 +401,10 @@
     display: flex;
     flex-direction: column;
     gap: 3px;
+  }
+
+  .record-item.active-rec {
+    border-color: var(--accent);
   }
 
   .rec-top {
@@ -459,12 +526,10 @@
     </tbody>
   </table>
 
-  <!-- ENTER BUTTON -->
   <div class="action-bar">
     <button class="btn-enter" onclick="handleEnter()">Enter</button>
   </div>
 
-  <!-- SUMMARY SECTION -->
   <div class="summary-section" id="summary-section">
     <div class="summary-row">
       <span class="summary-label">Total Amount</span>
@@ -480,28 +545,37 @@
     </div>
   </div>
 
-  <!-- NAME BAR -->
   <div class="name-bar">
     <label for="entry-name">Name:</label>
     <input type="text" id="entry-name" placeholder="Enter name (optional)..." oninput="updateLiveRecord()">
   </div>
 </div>
 
-<!-- RECORD LIST CONTAINER -->
 <div class="container" id="printable-records-container">
   <div class="records-header">
     <h2>Daily Records</h2>
-    <span class="record-count" id="record-count">0 Days</span>
+    <span class="record-count" id="record-count">0 / 10 Days</span>
   </div>
   <div class="record-actions" id="record-action-btns">
     <button class="btn-img" onclick="exportRecordsAsImage()">📸 Save/Share Image</button>
   </div>
-  <div class="record-list" id="record-list">
-    <div class="empty-records">No records yet today.</div>
+
+  <div class="today-section">
+    <div class="today-title">
+      <span>Current Date: <strong id="current-date-label">----</strong></span>
+      <span id="today-entries-count">0 entries</span>
+    </div>
+    <div id="today-record-list">
+      <div class="empty-records">No records yet today.</div>
+    </div>
+  </div>
+
+  <div class="folders-section" id="folders-list">
+    <div class="empty-records">No date folders yet.</div>
   </div>
 </div>
 
-<div class="footer-note" id="status-note">Multipliers locked by default. Stores up to 10 days of records (FIFO loop).</div>
+<div class="footer-note" id="status-note">Auto-resets at 12:00 AM daily. Tap any date folder to open/close records (up to 10 days FIFO).</div>
 
 <script>
   const qtyInputs = document.querySelectorAll('.qty-input');
@@ -510,14 +584,19 @@
   const statusNote = document.getElementById('status-note');
   const nameInput = document.getElementById('entry-name');
   const paymentInput = document.getElementById('payment-input');
-  const summarySection = document.getElementById('summary-section');
-  const recordListEl = document.getElementById('record-list');
+  const todayRecordListEl = document.getElementById('today-record-list');
+  const todayEntriesCountEl = document.getElementById('today-entries-count');
+  const currentDateLabelEl = document.getElementById('current-date-label');
+  const foldersListEl = document.getElementById('folders-list');
   const recordCountEl = document.getElementById('record-count');
 
-  const MAX_DAYS_HISTORY = 10; // 10 days loop on local storage
+  const MAX_DAYS_HISTORY = 10;
   const LABELS = ['R', 'P', 'L', 'M', 'C'];
   let isLocked = true;
   let activeRecordId = null;
+  let activeRecordDate = null;
+  let currentTrackedDate = getTodayKey();
+  let openFolders = new Set([currentTrackedDate]);
 
   function formatAmount(num) {
     return Math.round(num).toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -539,40 +618,86 @@
     });
   }
 
-  // Manages 10-day history loop storage structure: { "YYYY-MM-DD": [records...] }
   function getAllDaysHistory() {
     try {
       return JSON.parse(localStorage.getItem('rplmc_history_days') || '{}');
-    } catch(e) {
+    } catch (e) {
       return {};
     }
   }
 
   function saveAllDaysHistory(historyObj) {
-    // Enforce 10-day loop limit (FIFO: oldest day deleted if > 10 days)
-    let keys = Object.keys(historyObj).sort();
+    const today = getTodayKey();
+
+    Object.keys(historyObj).forEach(key => {
+      if (key !== today && (!Array.isArray(historyObj[key]) || historyObj[key].length === 0)) {
+        delete historyObj[key];
+      } else if (!Array.isArray(historyObj[key])) {
+        historyObj[key] = [];
+      }
+    });
+
+    if (!historyObj[today]) {
+      historyObj[today] = [];
+    }
+
+    const keys = Object.keys(historyObj).sort();
     if (keys.length > MAX_DAYS_HISTORY) {
       const excessCount = keys.length - MAX_DAYS_HISTORY;
       for (let i = 0; i < excessCount; i++) {
         delete historyObj[keys[i]];
       }
     }
+
     localStorage.setItem('rplmc_history_days', JSON.stringify(historyObj));
     renderRecords();
   }
 
-  // Get records specifically for today
-  function getRecords() {
+  function ensureTodayFolderExists() {
     const historyObj = getAllDaysHistory();
     const today = getTodayKey();
-    return historyObj[today] || [];
+    if (!Array.isArray(historyObj[today])) {
+      historyObj[today] = [];
+      saveAllDaysHistory(historyObj);
+    }
   }
 
-  function saveTodayRecords(todayRecords) {
+  function checkMidnightRollover() {
+    const nowDate = getTodayKey();
+    if (nowDate !== currentTrackedDate) {
+      currentTrackedDate = nowDate;
+      activeRecordId = null;
+      activeRecordDate = null;
+      qtyInputs.forEach(input => input.value = '');
+      nameInput.value = '';
+      paymentInput.value = '';
+      openFolders.add(nowDate);
+      ensureTodayFolderExists();
+      calculate();
+      renderRecords();
+    } else {
+      ensureTodayFolderExists();
+    }
+  }
+
+  function getRecordsForDate(dateKey) {
     const historyObj = getAllDaysHistory();
-    const today = getTodayKey();
-    historyObj[today] = todayRecords;
+    return historyObj[dateKey] || [];
+  }
+
+  function saveRecordsForDate(dateKey, dayRecords) {
+    const historyObj = getAllDaysHistory();
+    historyObj[dateKey] = dayRecords;
     saveAllDaysHistory(historyObj);
+  }
+
+  function toggleFolder(dateKey) {
+    if (openFolders.has(dateKey)) {
+      openFolders.delete(dateKey);
+    } else {
+      openFolders.add(dateKey);
+    }
+    renderRecords();
   }
 
   function toggleLock() {
@@ -599,6 +724,7 @@
       }
     });
 
+    ensureTodayFolderExists();
     calculate();
     renderRecords();
 
@@ -611,10 +737,10 @@
       });
     });
 
-    // Check date change every 30 seconds to handle 12:00 AM midnight reset smoothly
     setInterval(() => {
+      checkMidnightRollover();
       renderRecords();
-    }, 30000);
+    }, 15000);
   });
 
   function calculate() {
@@ -633,14 +759,12 @@
 
     localStorage.setItem('rplmc_multipliers', JSON.stringify(currentMults));
 
-    if (summarySection.classList.contains('visible')) {
-      const roundedTotal = Math.round(totalAmount);
-      document.getElementById('total-amount-disp').textContent = formatAmount(roundedTotal);
-      updatePaymentLive();
-      updateLiveRecord();
-    }
+    const roundedTotal = Math.round(totalAmount);
+    document.getElementById('total-amount-disp').textContent = formatAmount(roundedTotal);
+    updatePaymentLive();
+    updateLiveRecord();
 
-    return Math.round(totalAmount);
+    return roundedTotal;
   }
 
   function updatePaymentLive() {
@@ -660,6 +784,7 @@
     } else {
       diffDisp.style.color = 'var(--text)';
     }
+
     updateLiveRecord();
   }
 
@@ -673,9 +798,7 @@
     return Math.round(sum);
   }
 
-  function updateLiveRecord() {
-    if (!activeRecordId) return;
-
+  function buildEntryPayload() {
     let totalQty = 0;
     let totalAmount = 0;
     const breakdownParts = [];
@@ -697,80 +820,80 @@
     const recordName = rawName !== '' ? rawName : 'N/A';
     const breakdownStr = breakdownParts.length > 0 ? breakdownParts.join(' | ') : 'No QTY';
 
-    const records = getRecords();
+    return {
+      name: recordName,
+      totalQty,
+      totalAmount: roundedTotal,
+      payment,
+      diff,
+      breakdown: breakdownStr
+    };
+  }
+
+  function updateLiveRecord() {
+    if (!activeRecordId || !activeRecordDate) return;
+    if (activeRecordDate !== getTodayKey()) {
+      checkMidnightRollover();
+      return;
+    }
+
+    const payload = buildEntryPayload();
+    const records = getRecordsForDate(activeRecordDate);
     const index = records.findIndex(r => r.id === activeRecordId);
+
     if (index !== -1) {
-      records[index].name = recordName;
-      records[index].totalQty = totalQty;
-      records[index].totalAmount = roundedTotal;
-      records[index].payment = payment;
-      records[index].diff = diff;
-      records[index].breakdown = breakdownStr;
-      saveTodayRecords(records);
+      records[index] = { ...records[index], ...payload };
+      saveRecordsForDate(activeRecordDate, records);
     }
   }
 
   function handleEnter() {
-    let totalQty = 0;
-    let totalAmount = 0;
-    const breakdownParts = [];
+    checkMidnightRollover();
+    const today = getTodayKey();
+    const payload = buildEntryPayload();
+    const records = getRecordsForDate(today);
 
-    for (let i = 0; i < 5; i++) {
-      const q = parseFloat(qtyInputs[i].value) || 0;
-      const m = parseFloat(multInputs[i].value) || 0;
-      totalQty += q;
-      totalAmount += (q * m);
-      if (q > 0) {
-        breakdownParts.push(`${LABELS[i]}:${formatQty(q)}`);
-      }
-    }
-
-    const roundedTotal = Math.round(totalAmount);
-    const payment = parseFloat(paymentInput.value) || 0;
-    const diff = payment - roundedTotal;
-
-    const rawName = nameInput.value.trim();
-    const recordName = rawName !== '' ? rawName : 'N/A';
-    const breakdownStr = breakdownParts.length > 0 ? breakdownParts.join(' | ') : 'No QTY';
-
-    const records = getRecords();
-
-    if (activeRecordId) {
+    if (activeRecordId && activeRecordDate === today) {
       updateLiveRecord();
+      openFolders.add(today);
+      renderRecords();
       return;
     }
 
     activeRecordId = Date.now();
+    activeRecordDate = today;
+
     const newRecord = {
       id: activeRecordId,
-      name: recordName,
       timestamp: getFormattedTimestamp(),
-      totalQty: totalQty,
-      totalAmount: roundedTotal,
-      payment: payment,
-      diff: diff,
-      breakdown: breakdownStr
+      ...payload
     };
 
     records.unshift(newRecord);
-    saveTodayRecords(records);
+    openFolders.add(today);
+    saveRecordsForDate(today, records);
 
-    summarySection.classList.add('visible');
-    document.getElementById('total-amount-disp').textContent = formatAmount(roundedTotal);
+    document.getElementById('total-amount-disp').textContent = formatAmount(payload.totalAmount);
     updatePaymentLive();
   }
 
-  // Export full list image (expands max-height temporarily to capture everything)
   function exportRecordsAsImage() {
     const actionBtn = document.getElementById('record-action-btns');
-    const recordListContainer = document.getElementById('record-list');
-    
+    const foldersContainer = document.getElementById('folders-list');
+    const folderBodies = document.querySelectorAll('.folder-body');
+
     actionBtn.style.display = 'none';
-    
-    const originalMaxHeight = recordListContainer.style.maxHeight;
-    const originalOverflow = recordListContainer.style.overflowY;
-    recordListContainer.style.maxHeight = 'none';
-    recordListContainer.style.overflowY = 'visible';
+
+    const originalMaxHeight = foldersContainer.style.maxHeight;
+    const originalOverflow = foldersContainer.style.overflowY;
+    foldersContainer.style.maxHeight = 'none';
+    foldersContainer.style.overflowY = 'visible';
+
+    const previousOpenStates = [];
+    folderBodies.forEach((body, idx) => {
+      previousOpenStates[idx] = body.classList.contains('open');
+      body.classList.add('open');
+    });
 
     const targetElement = document.getElementById('printable-records-container');
 
@@ -781,8 +904,13 @@
       windowHeight: targetElement.scrollHeight
     }).then(canvas => {
       actionBtn.style.display = 'flex';
-      recordListContainer.style.maxHeight = originalMaxHeight;
-      recordListContainer.style.overflowY = originalOverflow;
+      foldersContainer.style.maxHeight = originalMaxHeight;
+      foldersContainer.style.overflowY = originalOverflow;
+      folderBodies.forEach((body, idx) => {
+        if (!previousOpenStates[idx]) {
+          body.classList.remove('open');
+        }
+      });
 
       const link = document.createElement('a');
       link.download = `RPLMC-Records-${getTodayKey()}.png`;
@@ -790,58 +918,89 @@
       link.click();
     }).catch(err => {
       actionBtn.style.display = 'flex';
-      recordListContainer.style.maxHeight = originalMaxHeight;
-      recordListContainer.style.overflowY = originalOverflow;
+      foldersContainer.style.maxHeight = originalMaxHeight;
+      foldersContainer.style.overflowY = originalOverflow;
+      folderBodies.forEach((body, idx) => {
+        if (!previousOpenStates[idx]) {
+          body.classList.remove('open');
+        }
+      });
       alert('May nangyaring error sa paggawa ng image. Subukang muli.');
       console.error(err);
     });
   }
 
-  function renderRecords() {
-    const historyObj = getAllDaysHistory();
-    const daysKeys = Object.keys(historyObj).sort().reverse(); // Newest day first
-    
-    recordCountEl.textContent = `${daysKeys.length} / ${MAX_DAYS_HISTORY} Days`;
+  function renderRecordCardsHtml(dayRecords) {
+    return dayRecords.map((rec, idx) => {
+      const activeClass = rec.id === activeRecordId ? ' active-rec' : '';
+      return `
+        <div class="record-item${activeClass}">
+          <div class="rec-top">
+            <div>
+              <span class="rec-name">#${dayRecords.length - idx} — ${escapeHtml(rec.name)}</span>
+              <div class="rec-time">${rec.timestamp}</div>
+            </div>
+          </div>
+          <div class="rec-mid">
+            <div class="rec-breakdown">${escapeHtml(rec.breakdown)}</div>
+            <div class="rec-stats">
+              <span class="rec-qty">QTY: ${formatQty(rec.totalQty)}</span>
+              <span class="rec-amt">${formatAmount(rec.totalAmount)}</span>
+            </div>
+          </div>
+          <div class="rec-pay-diff">
+            <span>Payment: ${formatAmount(rec.payment || 0)}</span>
+            <span>Sukli/Diff: ${formatAmount(rec.diff || 0)}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
 
-    if (daysKeys.length === 0) {
-      recordListEl.innerHTML = '<div class="empty-records">No records saved yet.</div>';
+  function renderRecords() {
+    const today = getTodayKey();
+    currentDateLabelEl.textContent = today;
+
+    const historyObj = getAllDaysHistory();
+    const todayRecords = Array.isArray(historyObj[today]) ? historyObj[today] : [];
+    todayEntriesCountEl.textContent = `${todayRecords.length} ${todayRecords.length === 1 ? 'entry' : 'entries'}`;
+
+    if (todayRecords.length === 0) {
+      todayRecordListEl.innerHTML = '<div class="empty-records">No records yet today.</div>';
+    } else {
+      todayRecordListEl.innerHTML = renderRecordCardsHtml(todayRecords);
+    }
+
+    const folderKeys = Object.keys(historyObj)
+      .filter(k => k === today || (Array.isArray(historyObj[k]) && historyObj[k].length > 0))
+      .sort()
+      .reverse();
+
+    recordCountEl.textContent = `${folderKeys.length} / ${MAX_DAYS_HISTORY} Days`;
+
+    if (folderKeys.length === 0) {
+      foldersListEl.innerHTML = '<div class="empty-records">No date folders yet.</div>';
       return;
     }
 
-    let htmlContent = '';
-    daysKeys.forEach(dayKey => {
-      const dayRecords = historyObj[dayKey] || [];
-      if (dayRecords.length === 0) return;
+    foldersListEl.innerHTML = folderKeys.map(dateKey => {
+      const items = Array.isArray(historyObj[dateKey]) ? historyObj[dateKey] : [];
+      const isCurrent = dateKey === today;
+      const isOpen = openFolders.has(dateKey);
+      const dayTotal = items.reduce((sum, r) => sum + (Number(r.totalAmount) || 0), 0);
 
-      // Day header separator
-      htmlContent += `<div style="background:#162032; color:var(--accent); font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:4px; margin-top:4px;">Date: ${dayKey}</div>`;
-
-      dayRecords.forEach((rec, idx) => {
-        htmlContent += `
-          <div class="record-item" ${rec.id === activeRecordId ? 'style="border-color: var(--accent);"' : ''}>
-            <div class="rec-top">
-              <div>
-                <span class="rec-name">#${dayRecords.length - idx} — ${escapeHtml(rec.name)}</span>
-                <div class="rec-time">${rec.timestamp}</div>
-              </div>
-            </div>
-            <div class="rec-mid">
-              <div class="rec-breakdown">${rec.breakdown}</div>
-              <div class="rec-stats">
-                <span class="rec-qty">QTY: ${formatQty(rec.totalQty)}</span>
-                <span class="rec-amt">${formatAmount(rec.totalAmount)}</span>
-              </div>
-            </div>
-            <div class="rec-pay-diff">
-              <span>Payment: ${formatAmount(rec.payment || 0)}</span>
-              <span>Sukli/Diff: ${formatAmount(rec.diff || 0)}</span>
-            </div>
+      return `
+        <div class="folder-card">
+          <button type="button" class="folder-btn${isCurrent ? ' current-day' : ''}" onclick="toggleFolder('${dateKey}')">
+            <span>${isOpen ? '📂' : '📁'} ${dateKey}${isCurrent ? ' (Today)' : ''}</span>
+            <span class="folder-meta">${items.length} rec · ₱${formatAmount(dayTotal)}</span>
+          </button>
+          <div class="folder-body${isOpen ? ' open' : ''}">
+            ${items.length > 0 ? renderRecordCardsHtml(items) : '<div class="empty-records">Folder is empty.</div>'}
           </div>
-        `;
-      });
-    });
-
-    recordListEl.innerHTML = htmlContent || '<div class="empty-records">No records saved yet.</div>';
+        </div>
+      `;
+    }).join('');
   }
 
   function escapeHtml(str) {
@@ -855,8 +1014,9 @@
     nameInput.value = '';
     paymentInput.value = '';
     activeRecordId = null;
-    summarySection.classList.remove('visible');
+    activeRecordDate = null;
     calculate();
+    renderRecords();
     qtyInputs[0].focus();
   }
 </script>
