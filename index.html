@@ -191,8 +191,13 @@
   }
 
   .summary-section {
+    display: none;
     background: #0b1324;
     border-bottom: 1px solid var(--border);
+  }
+
+  .summary-section.visible {
+    display: block;
   }
 
   .summary-row {
@@ -333,12 +338,10 @@
   }
 
   .folders-section {
-    padding: 6px 10px;
+    padding: 6px 10px 10px;
     display: flex;
     flex-direction: column;
     gap: 6px;
-    max-height: 260px;
-    overflow-y: auto;
   }
 
   .folder-card {
@@ -584,6 +587,7 @@
   const statusNote = document.getElementById('status-note');
   const nameInput = document.getElementById('entry-name');
   const paymentInput = document.getElementById('payment-input');
+  const summarySection = document.getElementById('summary-section');
   const todayRecordListEl = document.getElementById('today-record-list');
   const todayEntriesCountEl = document.getElementById('today-entries-count');
   const currentDateLabelEl = document.getElementById('current-date-label');
@@ -596,7 +600,7 @@
   let activeRecordId = null;
   let activeRecordDate = null;
   let currentTrackedDate = getTodayKey();
-  let openFolders = new Set([currentTrackedDate]);
+  let openFolders = new Set();
 
   function formatAmount(num) {
     return Math.round(num).toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -671,7 +675,7 @@
       qtyInputs.forEach(input => input.value = '');
       nameInput.value = '';
       paymentInput.value = '';
-      openFolders.add(nowDate);
+      summarySection.classList.remove('visible');
       ensureTodayFolderExists();
       calculate();
       renderRecords();
@@ -760,9 +764,11 @@
     localStorage.setItem('rplmc_multipliers', JSON.stringify(currentMults));
 
     const roundedTotal = Math.round(totalAmount);
-    document.getElementById('total-amount-disp').textContent = formatAmount(roundedTotal);
-    updatePaymentLive();
-    updateLiveRecord();
+    if (summarySection.classList.contains('visible')) {
+      document.getElementById('total-amount-disp').textContent = formatAmount(roundedTotal);
+      updatePaymentLive();
+      updateLiveRecord();
+    }
 
     return roundedTotal;
   }
@@ -853,9 +859,12 @@
     const payload = buildEntryPayload();
     const records = getRecordsForDate(today);
 
+    summarySection.classList.add('visible');
+    document.getElementById('total-amount-disp').textContent = formatAmount(payload.totalAmount);
+    updatePaymentLive();
+
     if (activeRecordId && activeRecordDate === today) {
       updateLiveRecord();
-      openFolders.add(today);
       renderRecords();
       return;
     }
@@ -870,24 +879,14 @@
     };
 
     records.unshift(newRecord);
-    openFolders.add(today);
     saveRecordsForDate(today, records);
-
-    document.getElementById('total-amount-disp').textContent = formatAmount(payload.totalAmount);
-    updatePaymentLive();
   }
 
   function exportRecordsAsImage() {
     const actionBtn = document.getElementById('record-action-btns');
-    const foldersContainer = document.getElementById('folders-list');
     const folderBodies = document.querySelectorAll('.folder-body');
 
     actionBtn.style.display = 'none';
-
-    const originalMaxHeight = foldersContainer.style.maxHeight;
-    const originalOverflow = foldersContainer.style.overflowY;
-    foldersContainer.style.maxHeight = 'none';
-    foldersContainer.style.overflowY = 'visible';
 
     const previousOpenStates = [];
     folderBodies.forEach((body, idx) => {
@@ -904,8 +903,6 @@
       windowHeight: targetElement.scrollHeight
     }).then(canvas => {
       actionBtn.style.display = 'flex';
-      foldersContainer.style.maxHeight = originalMaxHeight;
-      foldersContainer.style.overflowY = originalOverflow;
       folderBodies.forEach((body, idx) => {
         if (!previousOpenStates[idx]) {
           body.classList.remove('open');
@@ -918,8 +915,6 @@
       link.click();
     }).catch(err => {
       actionBtn.style.display = 'flex';
-      foldersContainer.style.maxHeight = originalMaxHeight;
-      foldersContainer.style.overflowY = originalOverflow;
       folderBodies.forEach((body, idx) => {
         if (!previousOpenStates[idx]) {
           body.classList.remove('open');
@@ -1015,6 +1010,7 @@
     paymentInput.value = '';
     activeRecordId = null;
     activeRecordDate = null;
+    summarySection.classList.remove('visible');
     calculate();
     renderRecords();
     qtyInputs[0].focus();
