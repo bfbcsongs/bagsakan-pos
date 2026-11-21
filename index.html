@@ -403,9 +403,12 @@
   }
 
   .today-section {
-    padding: 6px 10px;
+    padding: 8px 10px;
     border-bottom: 1px solid var(--border);
     background: #131c2e;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
 
   .today-title {
@@ -413,14 +416,21 @@
     font-weight: 800;
     text-transform: uppercase;
     color: #4ade80;
-    margin-bottom: 6px;
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
 
+  .previous-label {
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 6px 10px 2px;
+  }
+
   .folders-section {
-    padding: 6px 10px 10px;
+    padding: 4px 10px 10px;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -446,10 +456,6 @@
     font-size: 0.78rem;
     font-weight: 800;
     text-align: left;
-  }
-
-  .folder-btn.current-day {
-    color: var(--accent);
   }
 
   .folder-meta {
@@ -659,12 +665,13 @@
     </div>
   </div>
 
+  <div class="previous-label" id="previous-folders-label">Previous Date Folders</div>
   <div class="folders-section" id="folders-list">
-    <div class="empty-records">No date folders yet.</div>
+    <div class="empty-records">No previous date folders yet.</div>
   </div>
 </div>
 
-<div class="footer-note" id="status-note">Auto-resets at 12:00 AM daily. Tap any date folder to open/close records (up to 10 days FIFO).</div>
+<div class="footer-note" id="status-note">Auto-resets at 12:00 AM daily. Previous dates go to date folders (up to 10 days FIFO).</div>
 
 <script>
   const qtyInputs = document.querySelectorAll('.qty-input');
@@ -678,6 +685,7 @@
   const todayRecordListEl = document.getElementById('today-record-list');
   const todayEntriesCountEl = document.getElementById('today-entries-count');
   const currentDateLabelEl = document.getElementById('current-date-label');
+  const previousFoldersLabelEl = document.getElementById('previous-folders-label');
   const foldersListEl = document.getElementById('folders-list');
   const recordCountEl = document.getElementById('record-count');
 
@@ -855,7 +863,7 @@
     renderRecords();
   }
 
-  function ensureTodayFolderExists() {
+  function ensureTodayBucketExists() {
     const historyObj = getAllDaysHistory();
     const today = getTodayKey();
     if (!Array.isArray(historyObj[today])) {
@@ -874,11 +882,11 @@
       nameInput.value = '';
       paymentInput.value = '';
       summarySection.classList.remove('visible');
-      ensureTodayFolderExists();
+      ensureTodayBucketExists();
       calculate();
       renderRecords();
     } else {
-      ensureTodayFolderExists();
+      ensureTodayBucketExists();
     }
   }
 
@@ -926,7 +934,7 @@
       }
     });
 
-    ensureTodayFolderExists();
+    ensureTodayBucketExists();
     seedRecentNamesFromHistoryIfEmpty();
     renderRecentDropdown();
     calculate();
@@ -1176,32 +1184,38 @@
       todayRecordListEl.innerHTML = renderRecordCardsHtml(todayRecords);
     }
 
-    const folderKeys = Object.keys(historyObj)
+    const allTrackedDays = Object.keys(historyObj)
       .filter(k => k === today || (Array.isArray(historyObj[k]) && historyObj[k].length > 0))
       .sort()
       .reverse();
 
-    recordCountEl.textContent = `${folderKeys.length} / ${MAX_DAYS_HISTORY} Days`;
+    recordCountEl.textContent = `${allTrackedDays.length} / ${MAX_DAYS_HISTORY} Days`;
 
-    if (folderKeys.length === 0) {
-      foldersListEl.innerHTML = '<div class="empty-records">No date folders yet.</div>';
+    const previousFolderKeys = allTrackedDays.filter(k => k !== today);
+
+    if (previousFolderKeys.length === 0) {
+      previousFoldersLabelEl.style.display = 'none';
+      foldersListEl.style.display = 'none';
+      foldersListEl.innerHTML = '';
       return;
     }
 
-    foldersListEl.innerHTML = folderKeys.map(dateKey => {
+    previousFoldersLabelEl.style.display = 'block';
+    foldersListEl.style.display = 'flex';
+
+    foldersListEl.innerHTML = previousFolderKeys.map(dateKey => {
       const items = Array.isArray(historyObj[dateKey]) ? historyObj[dateKey] : [];
-      const isCurrent = dateKey === today;
       const isOpen = openFolders.has(dateKey);
       const dayTotal = items.reduce((sum, r) => sum + (Number(r.totalAmount) || 0), 0);
 
       return `
         <div class="folder-card">
-          <button type="button" class="folder-btn${isCurrent ? ' current-day' : ''}" onclick="toggleFolder('${dateKey}')">
-            <span>${isOpen ? '📂' : '📁'} ${dateKey}${isCurrent ? ' (Today)' : ''}</span>
+          <button type="button" class="folder-btn" onclick="toggleFolder('${dateKey}')">
+            <span>${isOpen ? '📂' : '📁'} ${dateKey}</span>
             <span class="folder-meta">${items.length} rec · ₱${formatAmount(dayTotal)}</span>
           </button>
           <div class="folder-body${isOpen ? ' open' : ''}">
-            ${items.length > 0 ? renderRecordCardsHtml(items) : '<div class="empty-records">Folder is empty.</div>'}
+            ${renderRecordCardsHtml(items)}
           </div>
         </div>
       `;
