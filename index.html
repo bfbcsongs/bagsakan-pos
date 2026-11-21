@@ -296,16 +296,14 @@
 
   .recent-dropdown {
     display: none;
-    position: absolute;
-    left: 10px;
-    right: 10px;
-    top: 100%;
+    position: relative;
+    margin: 0 10px 8px;
     z-index: 30;
     background: #0b1324;
     border: 1px solid var(--accent);
     border-radius: 8px;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.65);
-    max-height: 220px;
+    max-height: 240px;
     overflow-y: auto;
     padding: 4px;
   }
@@ -331,8 +329,8 @@
     border-radius: 5px;
     color: var(--text);
     text-align: left;
-    padding: 6px 8px;
-    font-size: 0.8rem;
+    padding: 7px 8px;
+    font-size: 0.82rem;
     font-weight: 600;
     display: flex;
     justify-content: space-between;
@@ -636,7 +634,7 @@
     <div class="name-bar">
       <label for="entry-name">Name:</label>
       <input type="text" id="entry-name" placeholder="Enter name (optional)..." oninput="handleNameInput()">
-      <button type="button" class="btn-recent" id="recent-btn" onclick="toggleRecentDropdown(event)">Recent ▾</button>
+      <button type="button" class="btn-recent" id="recent-btn" onpointerdown="event.preventDefault(); toggleRecentDropdown(event)">Recent ▾</button>
     </div>
     <div class="recent-dropdown" id="recent-dropdown"></div>
   </div>
@@ -722,6 +720,32 @@
     }
   }
 
+  function seedRecentNamesFromHistoryIfEmpty() {
+    const current = getRecentNames();
+    if (current.length > 0) return;
+
+    const historyObj = getAllDaysHistory();
+    const datesDesc = Object.keys(historyObj).sort().reverse();
+    const collected = [];
+
+    for (const dKey of datesDesc) {
+      const items = Array.isArray(historyObj[dKey]) ? historyObj[dKey] : [];
+      for (const rec of items) {
+        const cleaned = (rec && rec.name ? String(rec.name) : '').trim();
+        if (!cleaned || cleaned.toUpperCase() === 'N/A') continue;
+        if (!collected.some(item => item.toLowerCase() === cleaned.toLowerCase())) {
+          collected.push(cleaned);
+          if (collected.length >= MAX_RECENT_NAMES) break;
+        }
+      }
+      if (collected.length >= MAX_RECENT_NAMES) break;
+    }
+
+    if (collected.length > 0) {
+      localStorage.setItem(RECENT_NAMES_KEY, JSON.stringify(collected));
+    }
+  }
+
   function saveRecentName(rawName) {
     const cleaned = (rawName || '').trim();
     if (!cleaned || cleaned.toUpperCase() === 'N/A') return;
@@ -741,11 +765,12 @@
   }
 
   function toggleRecentDropdown(event) {
-    event.stopPropagation();
+    if (event) event.stopPropagation();
     const isOpen = recentDropdown.classList.contains('open');
     if (isOpen) {
       closeRecentDropdown();
     } else {
+      seedRecentNamesFromHistoryIfEmpty();
       renderRecentDropdown();
       recentDropdown.classList.add('open');
     }
@@ -763,15 +788,15 @@
       : allRecent;
 
     if (matches.length === 0) {
-      recentDropdown.innerHTML = `<div class="recent-empty">${query ? 'No matching recent name.' : 'No recent names yet.'}</div>`;
+      recentDropdown.innerHTML = `<div class="recent-empty">${query ? 'No matching recent name.' : 'No recent names yet. Type a name & tap Enter.'}</div>`;
       return;
     }
 
     const headerHtml = `<div class="recent-header">Recent Names (${matches.length}/${allRecent.length} max ${MAX_RECENT_NAMES})</div>`;
     const itemsHtml = matches.map((name, idx) => {
-      const escapedAttr = escapeHtml(name).replace(/"/g, '&quot;');
+      const encodedName = encodeURIComponent(name);
       return `
-        <button type="button" class="recent-item" onclick="selectRecentName(decodeRecentAttr(this.dataset.name))" data-name="${escapedAttr}">
+        <button type="button" class="recent-item" onpointerdown="event.preventDefault(); selectRecentName(decodeURIComponent('${encodedName}'))">
           <span>${escapeHtml(name)}</span>
           <span class="recent-rank">#${idx + 1}</span>
         </button>
@@ -781,12 +806,6 @@
     recentDropdown.innerHTML = headerHtml + itemsHtml;
   }
 
-  function decodeRecentAttr(val) {
-    const txt = document.createElement('textarea');
-    txt.innerHTML = val || '';
-    return txt.value;
-  }
-
   function handleNameInput() {
     updateLiveRecord();
     if (recentDropdown.classList.contains('open')) {
@@ -794,7 +813,7 @@
     }
   }
 
-  document.addEventListener('click', (e) => {
+  document.addEventListener('pointerdown', (e) => {
     const wrapper = document.getElementById('name-bar-wrapper');
     if (wrapper && !wrapper.contains(e.target)) {
       closeRecentDropdown();
@@ -908,6 +927,7 @@
     });
 
     ensureTodayFolderExists();
+    seedRecentNamesFromHistoryIfEmpty();
     renderRecentDropdown();
     calculate();
     renderRecords();
