@@ -305,6 +305,8 @@
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.65);
     max-height: 240px;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     padding: 4px;
   }
 
@@ -329,12 +331,13 @@
     border-radius: 5px;
     color: var(--text);
     text-align: left;
-    padding: 7px 8px;
+    padding: 8px 10px;
     font-size: 0.82rem;
     font-weight: 600;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    touch-action: pan-y;
   }
 
   .recent-item:hover,
@@ -640,7 +643,7 @@
     <div class="name-bar">
       <label for="entry-name">Name:</label>
       <input type="text" id="entry-name" placeholder="Enter name (optional)..." oninput="handleNameInput()">
-      <button type="button" class="btn-recent" id="recent-btn" onpointerdown="event.preventDefault(); toggleRecentDropdown(event)">Recent ▾</button>
+      <button type="button" class="btn-recent" id="recent-btn" onclick="toggleRecentDropdown(event)">Recent ▾</button>
     </div>
     <div class="recent-dropdown" id="recent-dropdown"></div>
   </div>
@@ -692,12 +695,15 @@
   const MAX_DAYS_HISTORY = 10;
   const MAX_RECENT_NAMES = 15;
   const RECENT_NAMES_KEY = 'rplmc_recent_names';
+  const SCROLL_TAP_THRESHOLD = 8;
   const LABELS = ['R', 'P', 'L', 'M', 'C'];
   let isLocked = true;
   let activeRecordId = null;
   let activeRecordDate = null;
   let currentTrackedDate = getTodayKey();
   let openFolders = new Set();
+  let touchStartY = 0;
+  let touchMoved = false;
 
   function formatAmount(num) {
     return Math.round(num).toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -772,6 +778,29 @@
     saveRecentName(selectedName);
   }
 
+  function onRecentItemTouchStart(e) {
+    if (e.touches && e.touches.length > 0) {
+      touchStartY = e.touches[0].clientY;
+      touchMoved = false;
+    }
+  }
+
+  function onRecentItemTouchMove(e) {
+    if (e.touches && e.touches.length > 0) {
+      if (Math.abs(e.touches[0].clientY - touchStartY) > SCROLL_TAP_THRESHOLD) {
+        touchMoved = true;
+      }
+    }
+  }
+
+  function onRecentItemClick(encodedName) {
+    if (touchMoved) {
+      touchMoved = false;
+      return;
+    }
+    selectRecentName(decodeURIComponent(encodedName));
+  }
+
   function toggleRecentDropdown(event) {
     if (event) event.stopPropagation();
     const isOpen = recentDropdown.classList.contains('open');
@@ -800,11 +829,11 @@
       return;
     }
 
-    const headerHtml = `<div class="recent-header">Recent Names (${matches.length}/${allRecent.length} max ${MAX_RECENT_NAMES})</div>`;
+    const headerHtml = `<div class="recent-header">Recent Names (${matches.length}/${allRecent.length} max ${MAX_RECENT_NAMES}) · Tap to select</div>`;
     const itemsHtml = matches.map((name, idx) => {
       const encodedName = encodeURIComponent(name);
       return `
-        <button type="button" class="recent-item" onpointerdown="event.preventDefault(); selectRecentName(decodeURIComponent('${encodedName}'))">
+        <button type="button" class="recent-item" ontouchstart="onRecentItemTouchStart(event)" ontouchmove="onRecentItemTouchMove(event)" onclick="onRecentItemClick('${encodedName}')">
           <span>${escapeHtml(name)}</span>
           <span class="recent-rank">#${idx + 1}</span>
         </button>
@@ -821,7 +850,7 @@
     }
   }
 
-  document.addEventListener('pointerdown', (e) => {
+  document.addEventListener('click', (e) => {
     const wrapper = document.getElementById('name-bar-wrapper');
     if (wrapper && !wrapper.contains(e.target)) {
       closeRecentDropdown();
